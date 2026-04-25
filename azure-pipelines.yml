@@ -7,8 +7,12 @@ trigger:
 - develop
 
 pool:
-  vmImage: mrgnc-self-hosted
+  name: mrgnc-self-hosted
 
 steps:
-- script: echo Starter pipeline for mrgc-platform-iac on develop
-  displayName: 'Starter check'
+- script: |
+    cd infra/terraform
+    terraform init
+    terraform validate
+    terraform plan -var-file="environments/dev.tfvars"
+  displayName: 'Terraform plan'
