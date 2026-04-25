@@ -21,3 +21,5 @@ steps:
     cd infra\terraform
     terraform apply -auto-approve -var-file=environments/dev.tfvars
   displayName: 'Terraform apply'
+  env:
+    ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
