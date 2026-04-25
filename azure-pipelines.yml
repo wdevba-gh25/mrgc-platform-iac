@@ -16,3 +16,8 @@ steps:
     terraform validate
     terraform plan -var-file="environments/dev.tfvars"
   displayName: 'Terraform plan'
+
+- script: |
+    cd infra\terraform
+    terraform apply -auto-approve -var-file=environments/dev.tfvars
+  displayName: 'Terraform apply'
