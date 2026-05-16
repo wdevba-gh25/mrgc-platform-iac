@@ -88,7 +88,7 @@ Recommended path:
 
 ## What Should I Read Next?
 
-If you are not familiar with Terraform, start with `docs/1_START_HERE/2_Terraform-explained.md` before continuing.
+If you are not familiar with Terraform, start with `docs/1-start-here/2-terraform-explained.md` before continuing.
 
 This repository is organized as a guided evidence trail. If you are reviewing the project for the first time, use the following reading order.
 
@@ -97,7 +97,7 @@ This repository is organized as a guided evidence trail. If you are reviewing th
 Read:
 
 ```text
-docs/1_Start_here/1_STEP_BY_STEP_HIGH_OVERVIEW_CHECKLIST.txt
+docs/1-start-here/1-step-by-step-high-overview-checklist.txt
 ```
 
 This file explains the full project expectation and final state after completing the MVP delivery work.
@@ -117,7 +117,7 @@ This is the best starting point to understand the whole delivery package before 
 Read:
 
 ```text
-docs/1_START_HERE/3_STEP_BY_STEP_IN_DETAIL_INITIAL_GUIDE_CHECKLIST.txt
+docs/1-start-here/3-step-by-step-in-detail-initial-guide-checklist.txt
 ```
 
 This file captures the earlier full execution journey in detail.
@@ -131,7 +131,7 @@ This guide is valuable because it preserves the real operational path, including
 Read:
 
 ```text
-docs/2_PLATFORM_FOUNDATION_TERRAFORM_AKS_ACR/STEP_BY_STEP_AKS_IN_DETAIL_CHECKLIST.txt
+docs/2-platform-foundation-terraform-aks-acr/step-by-step-aks-in-detail-checklist.txt
 ```
 
 This file focuses on the Terraform + AKS + ACR foundation.
@@ -143,7 +143,7 @@ It explains how the Azure platform was created, how AKS was validated, how names
 Read:
 
 ```text
-docs/3_RUNTIME_PROOF_AZURE_LOAD_TESTING/STEP_BY_STEP_SRE_APP_IN_DETAIL_CHECKLIST.txt
+docs/3-runtime-proof-azure-load-testing/step-by-step-sre-app-in-detail-checklist.txt
 ```
 
 This file explains the SRE/runtime validation stage.
@@ -178,7 +178,7 @@ the app was exercised, measured, and verified
 Read:
 
 ```text
-docs/4_OBSERVABILITY_APPLICATION_INSIGHTS/AZURE_MONITOR_APPLICATION_INSIGHTS.md
+docs/4-observability-application-insights/azure-monitor-application-insights.md
 ```
 
 This file explains how Azure Monitor / Application Insights was added to the Node.js backend.
@@ -203,9 +203,9 @@ P50 gives a sense of typical behavior. P95 helps expose slower tail-latency beha
 Read:
 
 ```text
-docs/5_COST_DISCIPLINE_PRICING_CALCULATOR/1_STEP_BY_STEP_APCALC_HIGH_OVERVIEW_CHECKLIST.txt
-docs/5_COST_DISCIPLINE_PRICING_CALCULATOR/2_STEP_BY_STEP_APCALC_IN_DETAIL_CHECKLIST.txt
-docs/5_COST_DISCIPLINE_PRICING_CALCULATOR/3_AZURE_PRICING_CALCULATOR_NARRATIVE.txt
+docs/5-cost-discipline-pricing-calculator/1-step-by-step-apcalc-high-overview-checklist.txt
+docs/5-cost-discipline-pricing-calculator/2-step-by-step-apcalc-in-detail-checklist.txt
+docs/5-cost-discipline-pricing-calculator/3-azure-pricing-calculator-narrative.txt
 ```
 
 These files explain the Azure Pricing Calculator and Cost Management stage.
@@ -219,10 +219,10 @@ This stage is where the project proves cost-awareness: the Azure platform was no
 After reading the documents, review the matching screenshots:
 
 ```text
-ScreenCaptures/1_PLATFORM_FOUNDATION_TERRAFORM_AKS_ACR/
-ScreenCaptures/2_RUNTIME_PROOF_AZURE_LOAD_TESTING/
-ScreenCaptures/3_OBSERVABILITY_APPLICATION_INSIGHTS/
-ScreenCaptures/4_COST_DISCIPLINE_PRICING_CALCULATOR/
+ScreenCaptures/1-platform-foundation-terraform-aks-acr/
+ScreenCaptures/2-runtime-proof-azure-load-testing/
+ScreenCaptures/3-observability-application-insights/
+ScreenCaptures/4-cost-discipline-pricing-calculator/
 ```
 
 The screenshots are the visual evidence trail behind the written guides.
@@ -259,11 +259,11 @@ infra/
   terraform/
 
 docs/
-  1_START_HERE/
-  2_PLATFORM_FOUNDATION_TERRAFORM_AKS_ACR/
-  3_RUNTIME_PROOF_AZURE_LOAD_TESTING/
-  4_OBSERVABILITY_APPLICATION_INSIGHTS/
-  5_COST_DISCIPLINE_PRICING_CALCULATOR/
+  1-start-here/
+  2-platform-foundation-terraform-aks-acr/
+  3-runtime-proof-azure-load-testing/
+  4-observability-application-insights/
+  5-cost-discipline-pricing-calculator/
 
 ScreenCaptures/
   1_PLATFORM_FOUNDATION_TERRAFORM_AKS_ACR/
@@ -351,6 +351,10 @@ Current rebuilt Dev evidence:
 - Cost Management cleanup
 
 The distinction is intentional. It keeps the evidence honest after Azure resources were deleted and recreated for cost-control reasons.
+Additional historical drill evidence is preserved in the frontend repository branch `rollback-drill/frontend-prod-v2`.
+
+That branch records the frontend endpoint state used during the rollback drill without merging that state into the main frontend `develop` branch.
+
 
 ## Current Azure Environment Status
 

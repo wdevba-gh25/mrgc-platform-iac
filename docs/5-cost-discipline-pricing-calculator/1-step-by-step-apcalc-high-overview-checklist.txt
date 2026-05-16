@@ -1,4 +1,4 @@
-STEP BY STEP APCALC HIGH OVERVIEW v4
+STEP BY STEP APCALC HIGH OVERVIEW 
 Azure Pricing Calculator + Cost Management Evidence
 Emergency Surge Demo - Cost Estimation / Cost Control Stage
 
@@ -166,4 +166,4 @@ Completed:
 STATUS:
 - DONE
 
-END OF STEP BY STEP APCALC HIGH OVERVIEW v4
+END OF STEP BY STEP APCALC HIGH OVERVIEW 

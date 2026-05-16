@@ -1,11 +1,11 @@
-STEP BY STEP SRE APP IN DETAIL v4
+STEP BY STEP SRE APP IN DETAIL 
 Emergency Surge Demo, runtime validation + Azure Load Testing + AKS logs + Application Insights / Azure Monitor
 
-IMPORTANT v4 UPDATE
+IMPORTANT  UPDATE
 This guide updates v3 after Stage 3 Application Insights / Azure Monitor was completed.
 
 In v3, Application Insights was still planned.
-In v4, Application Insights / Azure Monitor is DONE.
+In , Application Insights / Azure Monitor is DONE.
 
 This guide now separates:
 
@@ -314,4 +314,4 @@ This guide supports these honest claims:
 - KQL produced P50/P95 and failure-count evidence
 - historical Dev -> QA -> Prod -> rollback/recovery evidence exists separately
 
-END OF SRE APP IN DETAIL v4
+END OF SRE APP IN DETAIL 

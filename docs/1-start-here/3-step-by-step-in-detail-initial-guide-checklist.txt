@@ -1,10 +1,10 @@
-STEP BY STEP IN DETAIL v15
+STEP BY STEP IN DETAIL 
 Emergency Surge Demo, Azure DevOps + GitHub + Terraform + AKS
 
 IMPORTANT
 This version updates v14 and preserves the same full guide lifecycle through SECTION W.
 
-What v15 adds on top of v14:
+What  adds on top of v14:
 - SECTION S is no longer pending.
 - SECTION S now documents the real QA deployment path:
   - QA image tag promotion in ACR
@@ -40,7 +40,7 @@ DO NOT EXECUTE
 This rule exists because during SECTION S/S.1 there was confusion between commentary and commands.
 Going forward, no command block should be ambiguous.
 
-CURRENT REAL STATE AFTER v15 UPDATE
+CURRENT REAL STATE AFTER  UPDATE
 - repo structure stabilized
 - Git normalization completed
 - `.gitignore` policy implemented
@@ -483,7 +483,7 @@ Important runtime integration decision:
 - frontend API base URL was then updated to point to the real Azure backend endpoint
 - only then was the frontend image rebuilt and redeployed
 
-v15 note:
+ note:
 - DEV and QA live services were later patched back to `ClusterIP` in SECTION S.1 to release public IPs.
 - Local DEV/QA service YAML files should be updated to match the live post-QA cleanup state before they are applied again.
 
@@ -551,7 +551,7 @@ Frontend image workflow:
    - `ng-mrgc-ui-image`
    - tag `dev`
 
-v15 note:
+ note:
 - QA image tags were created from existing DEV tags by ACR import/tag promotion.
 - This avoided rebuilding images only to create QA proof.
 - PROD should use explicit `prod-v1` tags later in SECTION T.
@@ -897,7 +897,7 @@ Important note:
 - frontend image was rebuilt and pushed again
 - deployment was restarted/reapplied until the real Angular app was served
 
-v15 post-QA cleanup update:
+ post-QA cleanup update:
 - live DEV backend service was patched from `LoadBalancer` to `ClusterIP`
 - live DEV frontend service was patched from `LoadBalancer` to `ClusterIP`
 - this released the DEV public IPs
@@ -2314,4 +2314,62 @@ LinkedIn post should emphasize:
 Status:
 - PENDING
 
-END OF DETAILED GUIDE v15
+END OF DETAILED GUIDE 
+
+======================================================================
+SECTION W.1 - FRONTEND ROLLBACK DRILL BRANCH MANEUVER
+======================================================================
+
+Purpose:
+Preserve the frontend state used during the rollback/recovery evidence phase without merging that state into the main frontend develop branch.
+
+Repository:
+- ng-mrgc-ui
+
+Branch:
+- rollback-drill/frontend-prod-v2
+
+Commit:
+- 8f8e468 Record rollback drill frontend backend endpoint
+
+What happened:
+During final repository cleanup, the frontend repository was found on the rollback drill branch:
+
+```text
+rollback-drill/frontend-prod-v2
+```
+
+The branch contained a deliberate frontend backend endpoint state used for rollback drill evidence.
+The change updated the frontend API base URL from a placeholder/faulty endpoint to the current drill endpoint used during that evidence capture.
+
+Important decision:
+- do not restore the file as if it were accidental
+- do not merge this branch into develop as part of normal frontend development
+- commit it on the rollback drill branch to preserve the historical drill state
+- push the branch to GitHub as separate rollback/recovery evidence
+
+Command sequence executed:
+
+```cmd
+git status
+git add src/app/emergency-api.service.ts
+git commit -m "Record rollback drill frontend backend endpoint"
+git push origin rollback-drill/frontend-prod-v2
+git log --oneline -3
+git status
+```
+
+Confirmed result:
+
+```text
+8f8e468 (HEAD -> rollback-drill/frontend-prod-v2, origin/rollback-drill/frontend-prod-v2) Record rollback drill frontend backend endpoint
+7a72217 Simulate faulty frontend release for rollback drill
+20d5080 (develop) Add QA and PROD frontend manifests
+```
+
+Final interpretation:
+This branch is part of the historical rollback/recovery evidence. It intentionally preserves a drill-specific frontend endpoint state while keeping the main `develop` branch clean.
+
+Status:
+- DONE / HISTORICAL EVIDENCE PRESERVED
+

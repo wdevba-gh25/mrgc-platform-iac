@@ -1,4 +1,4 @@
-STEP BY STEP AKS IN DETAIL v3
+STEP BY STEP AKS IN DETAIL 
 Emergency Surge Demo, AKS creation for Azure DevOps + Terraform + CI/CD
 
 IMPORTANT

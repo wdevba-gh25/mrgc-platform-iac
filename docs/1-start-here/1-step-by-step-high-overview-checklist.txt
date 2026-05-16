@@ -1,4 +1,4 @@
-STEP BY STEP HIGH OVERVIEW v17
+STEP BY STEP HIGH OVERVIEW 
 Emergency Surge Demo, Azure DevOps + GitHub + Terraform + AKS + ACR + SRE + Observability + Cost Evidence
 
 GOAL
@@ -20,7 +20,7 @@ Build and document one solid Azure delivery evidence package that proves:
 14. Azure Cost Management actual spend review
 15. cost-control cleanup after evidence capture
 
-IMPORTANT v17 UPDATE
+IMPORTANT  UPDATE
 This version updates v16 with the final post-Stage-3 and post-APCalc truth.
 
 Key correction:
@@ -361,6 +361,31 @@ Deleted/gone:
 Status:
 - DONE
 
+STEP 17 - FRONTEND ROLLBACK DRILL BRANCH MANEUVER
+Completed during final repository cleanup:
+- frontend repository was found on rollback drill branch:
+  - rollback-drill/frontend-prod-v2
+- this branch preserved the frontend endpoint state used during rollback/recovery evidence
+- deliberate commit was made to keep that frontend backend endpoint change as historical drill evidence
+
+Repository:
+- ng-mrgc-ui
+
+Branch:
+- rollback-drill/frontend-prod-v2
+
+Commit:
+- 8f8e468 Record rollback drill frontend backend endpoint
+
+Purpose:
+- preserve rollback drill frontend endpoint configuration without merging it into develop
+- keep the rollback drill evidence isolated from the main frontend development branch
+- document that the drill branch was intentional historical evidence, not an accidental leftover branch
+
+Status:
+- DONE / HISTORICAL EVIDENCE PRESERVED
+
+
 FINAL TRUTH TABLE
 
 Platform / Terraform / AKS / ACR:
@@ -381,6 +406,7 @@ QA / Prod:
 
 Rollback / recovery:
 - DONE HISTORICALLY
+- FRONTEND DRILL BRANCH PRESERVED IN ng-mrgc-ui: rollback-drill/frontend-prod-v2
 
 Azure Load Testing:
 - DONE
@@ -406,4 +432,4 @@ Azure cleanup:
 Current live Azure environment:
 - NOT ACTIVE / DECOMMISSIONED AFTER EVIDENCE CAPTURE
 
-END OF HIGH OVERVIEW v17
+END OF HIGH OVERVIEW 
