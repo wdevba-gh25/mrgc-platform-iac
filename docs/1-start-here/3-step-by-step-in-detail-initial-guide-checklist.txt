@@ -1,0 +1,2317 @@
+STEP BY STEP IN DETAIL v15
+Emergency Surge Demo, Azure DevOps + GitHub + Terraform + AKS
+
+IMPORTANT
+This version updates v14 and preserves the same full guide lifecycle through SECTION W.
+
+What v15 adds on top of v14:
+- SECTION S is no longer pending.
+- SECTION S now documents the real QA deployment path:
+  - QA image tag promotion in ACR
+  - QA backend deployment
+  - QA frontend deployment
+  - QA service creation
+  - successful pod rollout
+  - successful image pulls from ACR
+  - Azure public IP quota failure
+  - port-forward QA smoke test workaround
+  - local port-forward lifecycle and cleanup rules
+- A new SECTION S.1 is inserted after SECTION S.
+  - SECTION S.1 is the post-QA cleanup / public IP release step.
+  - This cleanup was initially confused with SECTION T, but it belongs to the QA/post-QA phase, not PROD.
+- SECTION T remains the actual Deploy to PROD section.
+  - SECTION T is NOT DONE.
+  - SECTION T starts only when PROD manifests, PROD image tags, PROD namespace deployment, PROD browser validation, and screenshots are completed.
+- SECTIONS U, V, and W are preserved.
+  - U = rollback / recovery proof
+  - V = screenshot checklist
+  - W = final deliverables
+
+EXECUTION MODE RULE
+When executing live commands, use these labels:
+
+EXECUTE
+- Commands under EXECUTE are intended to be run now.
+
+DO NOT EXECUTE
+- Commands under DO NOT EXECUTE are examples, warnings, or reference only.
+- Do not run them unless they are later moved under EXECUTE.
+
+This rule exists because during SECTION S/S.1 there was confusion between commentary and commands.
+Going forward, no command block should be ambiguous.
+
+CURRENT REAL STATE AFTER v15 UPDATE
+- repo structure stabilized
+- Git normalization completed
+- `.gitignore` policy implemented
+- Azure DevOps environments created
+- approvals/checks configured
+- GitHub connection to Azure DevOps established
+- Azure service connection created
+- infrastructure repo confirmed
+- starter pipeline created and merged into `develop`
+- Microsoft-hosted parallelism remains unavailable
+- self-hosted agent path was configured successfully
+- Terraform created the platform resource group, ACR, and AKS
+- kubectl connected to AKS successfully
+- Dev / QA / Prod namespaces were created successfully
+- ACR/AKS extra deployment connections were reviewed and deferred until truly needed
+- backend and frontend Docker images were built and pushed to ACR
+- backend and frontend were manually deployed to Dev in AKS
+- app ran from Azure in the Dev namespace
+- Terraform plan and apply are proven through Azure DevOps pipeline execution using remote state
+- QA image tags were created in ACR:
+  - `node-mrgc-api-image:qa-v1`
+  - `ng-mrgc-ui-image:qa-v1`
+- backend and frontend were manually deployed to QA in AKS
+- QA pods ran successfully
+- QA services were created successfully
+- QA public LoadBalancer IP assignment failed because Azure public IP quota was reached
+- QA was validated internally using `kubectl port-forward`
+- DEV and QA public service exposure was released by changing live services from `LoadBalancer` to `ClusterIP`
+- public IP usage dropped from 3 to 1
+- PROD deployment has NOT started yet
+
+======================================================================
+SECTION A - CORE PRINCIPLES
+======================================================================
+
+1. Use three repos with clear responsibility boundaries:
+
+- ng-mrgc-ui
+- node-mrgc-api
+- mrgc-platform-iac
+
+2. Use the same branch model in all three repos:
+
+- `main` = stable/public branch
+- `develop` = active working branch
+
+3. Do not map branches directly to Azure DevOps environments.
+
+Use this simpler model:
+- pushes to `develop` -> natural candidate for Dev flow
+- merges to `main` -> natural candidate for stable QA/Prod flow
+
+4. GitHub PR banners are UI hints only.
+They are not the source of truth for branch health.
+
+5. For the current showcase, manual AKS deployment proof is acceptable as an intermediate milestone.
+Pipeline automation can be layered after the proof path is stable.
+
+Status:
+- DONE
+
+======================================================================
+SECTION B - REPOSITORY RESPONSIBILITIES
+======================================================================
+
+Frontend repo:
+- src/
+- docs/
+- architecture/
+- k8s/
+- pipelines/
+
+Backend repo:
+- src/
+- docs/
+- architecture/
+- k8s/
+- pipelines/
+
+Infrastructure repo:
+- infra/terraform/
+- docs/
+- architecture/
+
+Status:
+- DONE
+
+======================================================================
+SECTION C - PRE-CHECKS BEFORE AZURE DEVOPS
+======================================================================
+
+For each repo:
+1. Confirm the app or scaffold exists locally
+2. Confirm README exists
+3. Confirm there are no secrets in tracked files
+4. Confirm `.gitignore` exists and is correct
+5. Confirm `main` exists
+6. Confirm `develop` exists
+7. Confirm GitHub default branch is `main`
+
+Status:
+- DONE
+
+======================================================================
+SECTION D - GIT NORMALIZATION
+======================================================================
+
+Healthy result:
+- local: `main`, `develop`
+- remote: `origin/main`, `origin/develop`
+- default branch in GitHub web: `main`
+- clean working tree
+
+Status:
+- DONE
+
+======================================================================
+SECTION E - .GITIGNORE POLICY
+======================================================================
+
+Each repo should have a `.gitignore`.
+
+Status:
+- DONE
+
+======================================================================
+SECTION F - AZURE DEVOPS ENVIRONMENTS
+======================================================================
+
+Created environments:
+- `mrgnc-surge-dev`
+- `mrgnc-surge-qa`
+- `mrgnc-surge-prod`
+
+Current setup:
+- Resource = `None` for all three
+- approvals configured for QA and Prod
+- self-approval allowed for the solo showcase
+- timeouts configured
+
+Status:
+- DONE
+
+======================================================================
+SECTION G - CONNECT AZURE DEVOPS TO GITHUB
+======================================================================
+
+Repos connected:
+- ng-mrgc-ui
+- node-mrgc-api
+- mrgc-platform-iac
+
+Orchestration repo selected:
+- `mrgc-platform-iac`
+
+Status:
+- DONE
+
+======================================================================
+SECTION H - CREATE THE AZURE SERVICE CONNECTION
+======================================================================
+
+Created:
+- `sc-azure-mrgnc`
+
+IMPORTANT
+Do not create an AKS-specific deployment connection before AKS exists.
+That constraint is now satisfied because AKS already exists.
+
+Status:
+- DONE
+
+======================================================================
+SECTION J - VERIFY THE INFRASTRUCTURE REPO IN GITHUB
+======================================================================
+
+In `mrgc-platform-iac`, on branch `develop`, confirm these exist:
+
+- `README.md`
+- `docs/`
+- `architecture/`
+- `infra/terraform/versions.tf`
+- `infra/terraform/providers.tf`
+- `infra/terraform/variables.tf`
+- `infra/terraform/main.tf`
+- `infra/terraform/outputs.tf`
+- `infra/terraform/backend.tf` once backend is enabled
+- `infra/terraform/environments/dev.tfvars`
+- `infra/terraform/environments/qa.tfvars`
+- `infra/terraform/environments/prod.tfvars`
+
+Important clarification:
+- `backend.tf.example` originally existed only as a placeholder/template
+- once the real backend was enabled, the example file was removed and replaced by the real `backend.tf`
+
+Status:
+- DONE
+
+======================================================================
+SECTION K - CREATE THE PIPELINE FILE
+======================================================================
+
+In `mrgc-platform-iac`, create and commit:
+- `azure-pipelines.yml`
+
+Bootstrap YAML originally used:
+
+```yaml
+trigger:
+- develop
+
+pool:
+  vmImage: ubuntu-latest
+steps:
+- script: echo Starter pipeline for mrgc-platform-iac on develop
+  displayName: 'Starter check'
+```
+
+What happened:
+- Azure DevOps starter pipeline was created
+- temporary bootstrap branch was used:
+  - `mrgnc-pipeline-init`
+- PR was created and merged into `develop`
+- the temporary branch was deleted
+- `azure-pipelines.yml` now belongs to the real working branch
+- later, the starter YAML was replaced by real Terraform plan/apply steps using the self-hosted pool
+
+Status:
+- DONE
+
+======================================================================
+SECTION K.1 - SET UP A SELF-HOSTED AGENT ON THE LAPTOP
+======================================================================
+
+Goal:
+Make Azure DevOps capable of executing pipelines using the local laptop instead of Microsoft-hosted agents.
+
+Machine:
+- HP 840 G6
+- 32 GB RAM
+- Intel 8365U
+
+Practical rule:
+- the laptop does not need to stay on 24x7
+- it must be on, awake, connected, and running the agent only when pipeline jobs are executed
+
+Key completed facts:
+- pool created: `mrgnc-self-hosted`
+- agent configured and brought online
+- pipeline YAML updated to use:
+
+```yaml
+pool:
+  name: mrgnc-self-hosted
+```
+
+Controlled operating pattern:
+Before a run:
+1. start laptop
+2. keep it awake
+3. start Docker if needed
+4. open agent folder terminal
+5. run `run.cmd`
+
+After the run:
+1. wait for pipeline completion
+2. stop the agent cleanly with `Ctrl+C`
+3. close supporting tools if needed
+4. sleep or shut down the laptop
+
+Practical clarification:
+- self-hosted execution is real and proven
+- self-hosted parallelism was not the point
+- current working model is sequential execution on one laptop agent
+
+Status:
+- DONE
+
+======================================================================
+SECTION L - CREATE ACR AND AKS THROUGH TERRAFORM
+======================================================================
+
+Execution mode used:
+- local/manual Terraform execution
+- self-hosted path remains available later for Azure DevOps pipeline execution
+
+Where it was executed:
+- repo: `mrgc-platform-iac`
+- folder: `infra/terraform`
+
+Completed Terraform flow:
+1. `terraform init`
+2. `terraform validate`
+3. `terraform plan`
+4. AKS detailed runbook executed before apply
+5. `terraform apply`
+
+Result:
+- resource group created: `rg-emergency-surge-platform`
+- ACR created: `acremergencysurge`
+- AKS created: `aks-emergency-surge`
+- AcrPull role assignment created
+- Terraform outputs recorded successfully
+
+IMPORTANT
+The first AKS apply attempt failed because `Standard_B4ms` was not allowed in the subscription/region.
+The working recovery path was:
+- change `vm_size` in `environments/dev.tfvars`
+- rerun `terraform plan`
+- rerun `terraform apply`
+
+Working value used:
+- `Standard_DC2as_v5`
+
+Status:
+- DONE
+
+======================================================================
+SECTION M - VERIFY AKS AND PREPARE NAMESPACES
+======================================================================
+
+Completed verification:
+1. Azure Portal AKS overview confirmed
+2. `az aks get-credentials --resource-group rg-emergency-surge-platform --name aks-emergency-surge --overwrite-existing`
+3. `kubectl get nodes` succeeded
+4. `kubectl get ns` succeeded
+5. namespaces created:
+   - `aks-mrgnc-surge-dev`
+   - `aks-mrgnc-surge-qa`
+   - `aks-mrgnc-surge-prod`
+
+Status:
+- DONE
+
+======================================================================
+SECTION N - REVIEW THE ACR AND AKS DEPLOYMENT CONNECTIONS
+======================================================================
+
+Goal:
+Confirm whether the existing Azure Resource Manager service connection is enough for the next stages, and create extra ACR or AKS connections only if required by the deployment approach.
+
+What was checked:
+1. Azure DevOps
+2. Project settings
+3. Service connections
+4. existing ARM connection:
+   - `sc-azure-mrgnc`
+
+What was confirmed:
+- `sc-azure-mrgnc` exists
+- type = Azure Resource Manager
+- no obvious visible error
+- base Azure connection is already in place
+
+Decision:
+- do not create `sc-acr-emergency-surge` yet
+- do not create `sc-aks-emergency-surge` yet
+- create extra specialized connections later only if the actual image push or deployment task requires them
+
+Status:
+- DONE FOR REVIEW
+- NO NEW CONNECTIONS CREATED YET, BY DESIGN
+
+======================================================================
+SECTION O - PREPARE KUBERNETES MANIFESTS
+======================================================================
+
+Goal:
+Create the first minimum viable Kubernetes manifests for manual Dev deployment.
+
+Practical rule:
+- keep the first deployment simple
+- target `aks-mrgnc-surge-dev` first
+- prefer minimum viable manifests before more elaborate overlays
+- do not start with ingress
+- do not start with QA/Prod overlays
+- do not overengineer runtime config for the first proof
+
+Folder structure created:
+- backend:
+  - `node-mrgc-api\k8s\dev\backend-deployment.yaml`
+  - `node-mrgc-api\k8s\dev\backend-service.yaml`
+- frontend:
+  - `ng-mrgc-ui\k8s\dev\frontend-deployment.yaml`
+  - `ng-mrgc-ui\k8s\dev\frontend-service.yaml`
+
+Backend deployment manifest:
+- image:
+  - `acremergencysurge.azurecr.io/node-mrgc-api-image:dev`
+- container port:
+  - `4001`
+- environment variable:
+  - `PORT=4001`
+- namespace:
+  - `aks-mrgnc-surge-dev`
+
+Backend service manifest:
+- service name:
+  - `emergency-surge-backend`
+- namespace:
+  - `aks-mrgnc-surge-dev`
+- port:
+  - `4001`
+- targetPort:
+  - `4001`
+- type:
+  - initially `ClusterIP`
+  - later corrected to `LoadBalancer` to expose backend for the first MVP browser-facing frontend integration
+
+Frontend deployment manifest:
+- image:
+  - `acremergencysurge.azurecr.io/ng-mrgc-ui-image:dev`
+- container port:
+  - `80`
+- namespace:
+  - `aks-mrgnc-surge-dev`
+
+Frontend service manifest:
+- service name:
+  - `emergency-surge-frontend`
+- namespace:
+  - `aks-mrgnc-surge-dev`
+- port:
+  - `80`
+- targetPort:
+  - `80`
+- type:
+  - `LoadBalancer`
+
+Important correction discovered during implementation:
+- backend repo server code listens on:
+  - `4001`
+- not `4000`
+- manifests were corrected accordingly
+
+Important runtime integration decision:
+- frontend was not deployed blindly at first
+- backend was deployed first
+- backend external IP was obtained
+- frontend API base URL was then updated to point to the real Azure backend endpoint
+- only then was the frontend image rebuilt and redeployed
+
+v15 note:
+- DEV and QA live services were later patched back to `ClusterIP` in SECTION S.1 to release public IPs.
+- Local DEV/QA service YAML files should be updated to match the live post-QA cleanup state before they are applied again.
+
+Status:
+- DONE
+
+======================================================================
+SECTION P - BUILD AND PUSH DOCKER IMAGES
+======================================================================
+
+Goal:
+Create real container images for backend and frontend, then push them to ACR for AKS deployment.
+
+Execution mode:
+- local/manual build and push used first for proof
+- self-hosted agent path remains available later for Azure DevOps pipeline automation
+
+Backend Dockerfile:
+- created in repo root:
+  - `node-mrgc-api\Dockerfile`
+
+Backend image workflow:
+1. verify Docker Desktop / Docker engine alive with `docker version`
+2. build:
+   - `docker build -t acremergencysurge.azurecr.io/node-mrgc-api-image:dev .`
+3. verify locally:
+   - `docker images`
+4. log in to ACR:
+   - `az acr login --name acremergencysurge`
+5. push:
+   - `docker push acremergencysurge.azurecr.io/node-mrgc-api-image:dev`
+6. verify in Azure Portal ACR repositories:
+   - `node-mrgc-api-image`
+   - tag `dev`
+
+Frontend Dockerfile:
+- created in repo root:
+  - `ng-mrgc-ui\Dockerfile`
+
+Important frontend Dockerfile correction:
+- initial generic copy path led to the default nginx welcome page
+- Angular build output path in `angular.json` showed:
+  - `dist/angular-signals-emergency-surge-demo`
+- final working Dockerfile copy line used:
+  - `COPY --from=build /app/dist/angular-signals-emergency-surge-demo/browser /usr/share/nginx/html`
+
+Frontend source code integration change:
+- file:
+  - `src/app/emergency-api.service.ts`
+- `baseUrl` changed from:
+  - `http://localhost:4001`
+- to:
+  - `http://20.81.83.150:4001`
+- for the MVP Azure Dev deployment proof
+
+Frontend image workflow:
+1. pull latest frontend repo changes locally if edited directly in GitHub on `develop`
+2. build:
+   - `docker build -t acremergencysurge.azurecr.io/ng-mrgc-ui-image:dev .`
+3. log in to ACR:
+   - `az acr login --name acremergencysurge`
+4. push:
+   - `docker push acremergencysurge.azurecr.io/ng-mrgc-ui-image:dev`
+5. verify in Azure Portal ACR repositories:
+   - `ng-mrgc-ui-image`
+   - tag `dev`
+
+v15 note:
+- QA image tags were created from existing DEV tags by ACR import/tag promotion.
+- This avoided rebuilding images only to create QA proof.
+- PROD should use explicit `prod-v1` tags later in SECTION T.
+
+Status:
+- DONE
+
+======================================================================
+SECTION Q - IMPLEMENT TERRAFORM STAGES IN THE PIPELINE
+======================================================================
+
+Goal:
+Reproduce the already-proven Terraform flow through Azure DevOps pipeline execution using the self-hosted agent.
+
+Execution mode:
+- self-hosted agent
+- sequential execution
+- no dependency on Microsoft-hosted parallelism
+
+Original intent:
+- prove `terraform_plan`
+- then prove `terraform_apply`
+
+IMPORTANT
+Infrastructure had already been proven manually before this section.
+So this section was never about proving the Azure resources from scratch.
+It was about proving that Azure DevOps could execute the same Terraform lifecycle reliably.
+
+----------------------------------------------------------------------
+Q.1 - FIRST SAFE MILESTONE, PIPELINE PLAN ONLY
+----------------------------------------------------------------------
+
+Initial working YAML milestone:
+- replace starter echo pipeline with a Terraform plan step
+- run on `develop`
+- use self-hosted pool `mrgnc-self-hosted`
+
+Early working pipeline shape:
+- `terraform init`
+- `terraform validate`
+- `terraform plan -var-file="environments/dev.tfvars"`
+
+What this proved:
+- Azure DevOps could trigger the run
+- self-hosted agent could pick up the job
+- repo checkout worked correctly
+- Terraform could execute in pipeline context
+
+First failure encountered:
+- pipeline complained that required variable `subscription_id` was missing
+
+Root cause:
+- GitHub `develop` `infra/terraform/environments/dev.tfvars` was outdated
+- local working file had the real `subscription_id` and corrected `vm_size`
+- repo version did not
+
+Corrective action:
+- update `infra/terraform/environments/dev.tfvars` in GitHub/local repo to match the real known-good local file
+- rerun pipeline
+
+Result:
+- pipeline Terraform plan succeeded
+
+Intermediate status at that point:
+- pipeline plan = DONE
+- pipeline apply = not yet done
+
+----------------------------------------------------------------------
+Q.2 - FIRST PIPELINE APPLY ATTEMPT
+----------------------------------------------------------------------
+
+After pipeline plan success, YAML was extended with:
+- `terraform apply -auto-approve -var-file="environments/dev.tfvars"`
+
+First apply result:
+- FAILED
+
+Observed behavior:
+- pipeline apply tried to create:
+  - resource group
+  - ACR
+  - AKS
+  - AcrPull role assignment
+
+Error meaning:
+- Azure said `rg-emergency-surge-platform` already existed
+- Terraform pipeline run was operating with fresh workspace-local state
+- pipeline did not know about the infra already created manually earlier
+
+Critical conclusion:
+- this was not an Azure resource disaster
+- this was a Terraform state/backend problem
+- local manual state and fresh pipeline execution were not aligned
+
+Important decision:
+- do not delete existing Azure resources
+- do not rerun apply blindly
+- stop and introduce a real shared Terraform backend/state strategy
+
+----------------------------------------------------------------------
+Q.3 - ADD REAL TERRAFORM REMOTE BACKEND
+----------------------------------------------------------------------
+
+Decision:
+- use Azure Storage remote backend for Terraform state
+
+Reason:
+- cheap
+- standard pattern
+- shared state for local and pipeline execution
+- removes reliance on ephemeral local agent workspace state
+
+Safety first:
+- before backend migration, create local state backup:
+  - `terraform.tfstate.BACKUP_BEFORE_REMOTE_STATE`
+
+Azure resources created for backend:
+- resource group:
+  - `rg-tfstate-emergency-surge`
+- storage account:
+  - `sttfemergencysurge`
+- container:
+  - `tfstate`
+
+Authentication path used for setup:
+- storage account access key
+- exported locally with:
+  - `set ARM_ACCESS_KEY=...`
+
+Important clarification:
+- a `backend.tf.example` placeholder file already existed
+- at first there was confusion because only the example existed, not the real active backend file
+- correct action was:
+  - create/rename real `backend.tf`
+  - remove the example after real backend was enabled
+
+Real backend file created:
+- `infra/terraform/backend.tf`
+
+Working backend content:
+```hcl
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-tfstate-emergency-surge"
+    storage_account_name = "sttfemergencysurge"
+    container_name       = "tfstate"
+    key                  = "dev.terraform.tfstate"
+  }
+}
+```
+
+----------------------------------------------------------------------
+Q.4 - MIGRATE EXISTING LOCAL STATE TO THE REMOTE BACKEND
+----------------------------------------------------------------------
+
+After real `backend.tf` existed and `ARM_ACCESS_KEY` was set in the same CMD session:
+
+- `terraform init -migrate-state`
+
+Terraform prompt appeared asking whether to copy existing local state into the new `azurerm` backend.
+
+Correct answer:
+- `yes`
+
+Result:
+- backend configured successfully
+- local state copied into remote backend
+
+Verification:
+- container `tfstate`
+- blob `dev.terraform.tfstate`
+- visible in Azure Storage
+
+Practical outcome:
+- local Terraform was no longer using only local state
+- state was now centralized in Azure Storage
+- pipeline could be taught to use the same state
+
+----------------------------------------------------------------------
+Q.5 - CLEAN LOCAL PLAN AFTER STATE MIGRATION
+----------------------------------------------------------------------
+
+After state migration, local:
+
+- `terraform plan -var-file="environments/dev.tfvars"`
+
+New result:
+- no longer attempted to create RG/ACR/AKS from scratch
+- instead, it refreshed real existing Azure resources from state/backend
+
+One remaining drift appeared:
+- AKS node pool `upgrade_settings`
+
+What this meant:
+- remote state was working
+- but imported/live AKS resource had a small extra/defaulted configuration drift compared with the minimal Terraform config
+
+Decision:
+- align code to live AKS node-pool settings rather than applying blindly
+
+Terraform `main.tf` update:
+- inside `default_node_pool`, add:
+
+```hcl
+upgrade_settings {
+  max_surge                     = "10%"
+  drain_timeout_in_minutes      = 0
+  node_soak_duration_in_minutes = 0
+}
+```
+
+After this alignment, local plan result became:
+
+- `No changes. Your infrastructure matches the configuration.`
+
+This was the critical confirmation that:
+- remote state works
+- code matches real Azure infra
+- apply risk is now much lower
+
+----------------------------------------------------------------------
+Q.6 - WIRE BACKEND ACCESS INTO THE PIPELINE
+----------------------------------------------------------------------
+
+Next requirement:
+- Azure DevOps pipeline needed access to the same remote backend
+
+Pipeline secret variable added:
+- `ARM_ACCESS_KEY`
+- stored in Azure DevOps as secret variable
+- NOT hardcoded into YAML
+
+Important clarification:
+- local CMD `set ARM_ACCESS_KEY=...` is not enough for pipeline runs
+- Azure DevOps needs its own stored secret variable
+
+Final working Terraform pipeline YAML shape:
+```yaml
+trigger:
+- develop
+
+pool:
+  name: mrgnc-self-hosted
+
+steps:
+- script: |
+    cd infra/terraform
+    terraform init
+    terraform validate
+    terraform plan -var-file="environments/dev.tfvars"
+  displayName: 'Terraform plan'
+  env:
+    ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+
+- script: |
+    cd infra/terraform
+    terraform apply -auto-approve -var-file="environments/dev.tfvars"
+  displayName: 'Terraform apply'
+  env:
+    ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+```
+
+Important correction discovered:
+- initially `env:` was only added to the `apply` step
+- this was corrected so both `plan` and `apply` receive the backend key
+
+----------------------------------------------------------------------
+Q.7 - FINAL PIPELINE RERUN AND SECTION CLOSURE
+----------------------------------------------------------------------
+
+After:
+- `backend.tf` committed
+- `main.tf` drift alignment committed
+- `backend.tf.example` removed
+- YAML updated to pass `ARM_ACCESS_KEY`
+- Azure DevOps secret variable added
+- self-hosted agent left running
+
+The same existing pipeline was rerun on:
+- branch `develop`
+
+Final result:
+- pipeline succeeded cleanly
+
+What this final success proves:
+- Azure DevOps can execute Terraform through self-hosted agent
+- remote backend works in pipeline context
+- pipeline `plan` works
+- pipeline `apply` works
+- local manual infra proof and pipeline automation are now aligned through shared state
+
+SECTION Q FINAL STATUS:
+- DONE
+
+What SECTION Q now honestly claims:
+- not “hosted runners magic”
+- not “parallelism solved”
+- but:
+  - self-hosted Azure DevOps pipeline automation
+  - Terraform remote backend/state management
+  - successful plan/apply execution in pipeline context
+  - real troubleshooting and correction of config drift and state mismatch
+
+======================================================================
+SECTION R - DEPLOY TO DEV
+======================================================================
+
+Goal:
+Achieve first end-to-end app deployment proof in AKS Dev.
+
+Current reality:
+- manual Dev deployment has already been achieved successfully
+- Azure DevOps pipeline-driven Dev deployment is still pending as a later automation layer
+- after SECTION S.1, DEV services were changed from public LoadBalancer to internal ClusterIP to release public IPs
+
+Namespace:
+- `aks-mrgnc-surge-dev`
+
+Manual deployment path executed:
+1. backend deployment applied
+2. backend service applied
+3. backend pod confirmed Running
+4. backend external IP obtained:
+   - `20.81.83.150`
+5. frontend source updated to point to backend external IP
+6. frontend image rebuilt and pushed again
+7. frontend deployment applied
+8. frontend service applied
+9. frontend pod confirmed Running
+10. frontend external IP obtained:
+    - `20.127.252.135`
+11. app opened in browser from Azure successfully
+
+Useful verification commands:
+- `kubectl get all -n aks-mrgnc-surge-dev`
+- `kubectl get svc -n aks-mrgnc-surge-dev`
+- `kubectl get pods -n aks-mrgnc-surge-dev`
+- `kubectl logs -f -n aks-mrgnc-surge-dev <backend-pod-name>`
+
+Important note:
+- first frontend deployment showed default nginx page
+- frontend Dockerfile was corrected
+- frontend image was rebuilt and pushed again
+- deployment was restarted/reapplied until the real Angular app was served
+
+v15 post-QA cleanup update:
+- live DEV backend service was patched from `LoadBalancer` to `ClusterIP`
+- live DEV frontend service was patched from `LoadBalancer` to `ClusterIP`
+- this released the DEV public IPs
+- DEV workloads remain available internally inside AKS
+- local DEV service YAML files should be updated to `type: ClusterIP` before they are ever applied again
+
+Status:
+- DONE MANUALLY
+- PUBLIC DEV LOADBALANCERS RELEASED IN SECTION S.1
+- PIPELINE AUTOMATION STILL PENDING
+
+======================================================================
+SECTION S - DEPLOY TO QA
+======================================================================
+
+Goal:
+Deploy backend and frontend to QA using QA-specific ACR image tags and validate the app in the QA namespace.
+
+Use environment:
+- `mrgnc-surge-qa`
+
+Deploy to namespace:
+- `aks-mrgnc-surge-qa`
+
+Respect approval gate:
+- still valid for the future pipeline path
+- this section was executed manually first to prove the deployment path
+
+Target image tags:
+- backend:
+  - `acremergencysurge.azurecr.io/node-mrgc-api-image:qa-v1`
+- frontend:
+  - `acremergencysurge.azurecr.io/ng-mrgc-ui-image:qa-v1`
+
+----------------------------------------------------------------------
+S.0 - CRITICAL MENTAL MODEL
+----------------------------------------------------------------------
+
+ACR image tags and Kubernetes deployments are different things.
+
+ACR stores images:
+- repository + tag = available image version
+
+Kubernetes runs images:
+- `kubectl apply` sends YAML to AKS
+- AKS reads the image reference from YAML
+- AKS pulls that image from ACR
+- AKS creates pods
+
+If Kubernetes YAML references `qa-v1`, ACR must already contain `qa-v1`.
+
+If ACR does not contain the tag, the pod may fail with:
+- `ImagePullBackOff`
+- `ErrImagePull`
+
+----------------------------------------------------------------------
+S.1 - PROMOTE BACKEND IMAGE TAG TO QA
+----------------------------------------------------------------------
+
+The backend DEV image already existed as:
+- `node-mrgc-api-image:dev`
+
+The QA tag was created from the working DEV image.
+
+EXECUTE
+
+```cmd
+az acr import ^
+  --name acremergencysurge ^
+  --source acremergencysurge.azurecr.io/node-mrgc-api-image:dev ^
+  --image node-mrgc-api-image:qa-v1
+```
+
+Verify:
+
+```cmd
+az acr repository show-tags ^
+  --name acremergencysurge ^
+  --repository node-mrgc-api-image ^
+  --output table
+```
+
+Observed result:
+
+```text
+Result
+--------
+dev
+qa-v1
+```
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.2 - PROMOTE FRONTEND IMAGE TAG TO QA
+----------------------------------------------------------------------
+
+The frontend DEV image already existed as:
+- `ng-mrgc-ui-image:dev-v2`
+
+The QA tag was created from the working DEV image.
+
+EXECUTE
+
+```cmd
+az acr import ^
+  --name acremergencysurge ^
+  --source acremergencysurge.azurecr.io/ng-mrgc-ui-image:dev-v2 ^
+  --image ng-mrgc-ui-image:qa-v1
+```
+
+Verify:
+
+```cmd
+az acr repository show-tags ^
+  --name acremergencysurge ^
+  --repository ng-mrgc-ui-image ^
+  --output table
+```
+
+Expected:
+- `dev-v2`
+- `qa-v1`
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.3 - VERIFY QA MANIFESTS BEFORE DEPLOYMENT
+----------------------------------------------------------------------
+
+Backend QA deployment should contain:
+
+```yaml
+namespace: aks-mrgnc-surge-qa
+```
+
+and:
+
+```yaml
+image: acremergencysurge.azurecr.io/node-mrgc-api-image:qa-v1
+```
+
+Frontend QA deployment should contain:
+
+```yaml
+namespace: aks-mrgnc-surge-qa
+```
+
+and:
+
+```yaml
+image: acremergencysurge.azurecr.io/ng-mrgc-ui-image:qa-v1
+```
+
+QA services initially used:
+
+```yaml
+type: LoadBalancer
+```
+
+This was intentional at first because we wanted browser/screenshot proof.
+Azure later blocked the external IP assignment due to public IP quota.
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.4 - PATH MISTAKE AND FIX
+----------------------------------------------------------------------
+
+Mistake:
+The terminal was already inside:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\qa
+```
+
+but the command used was:
+
+```cmd
+kubectl apply -f k8s/qa/backend-deployment.yaml
+```
+
+Error:
+
+```text
+error: the path "k8s/qa/backend-deployment.yaml" does not exist
+```
+
+Reason:
+From inside `k8s\qa`, that path becomes:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\qa\k8s\qa\backend-deployment.yaml
+```
+
+Fix:
+When already inside the `k8s\qa` folder, run only:
+
+EXECUTE
+
+```cmd
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f backend-service.yaml
+```
+
+Alternative from project root:
+
+EXECUTE
+
+```cmd
+cd /d "D:\Ready to use\GITMS\node-mrgc-api"
+
+kubectl apply -f k8s/qa/backend-deployment.yaml
+kubectl apply -f k8s/qa/backend-service.yaml
+```
+
+Status:
+- FIXED
+
+----------------------------------------------------------------------
+S.5 - DEPLOY BACKEND QA
+----------------------------------------------------------------------
+
+Folder used:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\qa
+```
+
+EXECUTE
+
+```cmd
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f backend-service.yaml
+kubectl rollout status deployment/emergency-surge-backend -n aks-mrgnc-surge-qa
+kubectl get all -n aks-mrgnc-surge-qa
+kubectl get svc -n aks-mrgnc-surge-qa
+```
+
+Observed result:
+- `deployment.apps/emergency-surge-backend created`
+- `service/emergency-surge-backend created`
+- `deployment "emergency-surge-backend" successfully rolled out`
+- pod `1/1 Running`
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.6 - DEPLOY FRONTEND QA
+----------------------------------------------------------------------
+
+Folder used:
+
+```text
+D:\Ready to use\GITMS\ng-mrgc-ui\k8s\qa
+```
+
+EXECUTE
+
+```cmd
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f frontend-service.yaml
+kubectl rollout status deployment/emergency-surge-frontend -n aks-mrgnc-surge-qa
+kubectl get all -n aks-mrgnc-surge-qa
+kubectl get svc -n aks-mrgnc-surge-qa
+```
+
+Observed result:
+- `deployment.apps/emergency-surge-frontend created`
+- `service/emergency-surge-frontend created`
+- `deployment "emergency-surge-frontend" successfully rolled out`
+- pod `1/1 Running`
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.7 - LOADBALANCER EXTERNAL IP FAILURE
+----------------------------------------------------------------------
+
+Observed service state:
+
+```text
+emergency-surge-backend    LoadBalancer   ...   <pending>
+emergency-surge-frontend   LoadBalancer   ...   <pending>
+```
+
+Diagnostic commands:
+
+EXECUTE
+
+```cmd
+kubectl describe svc emergency-surge-frontend -n aks-mrgnc-surge-qa
+kubectl describe svc emergency-surge-backend -n aks-mrgnc-surge-qa
+kubectl get events -n aks-mrgnc-surge-qa --sort-by=.lastTimestamp
+```
+
+Observed root cause:
+
+```text
+ERROR CODE: PublicIPCountLimitReached
+Cannot create more than 3 public IP addresses for this subscription in this region.
+```
+
+Meaning:
+- QA pods were fine
+- QA services existed
+- images were pulled
+- Azure refused to create additional public IPs
+- the issue was Azure quota, not Kubernetes YAML or app failure
+
+Status:
+- BLOCKED FOR PUBLIC IP ONLY
+
+----------------------------------------------------------------------
+S.8 - CONFIRM QA IMAGE PULLS SUCCEEDED
+----------------------------------------------------------------------
+
+Events showed:
+
+```text
+Successfully pulled image "acremergencysurge.azurecr.io/node-mrgc-api-image:qa-v1"
+Successfully pulled image "acremergencysurge.azurecr.io/ng-mrgc-ui-image:qa-v1"
+```
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.9 - PUBLIC IP QUOTA CHECK
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+az network public-ip list ^
+  --query "[].{Name:name, ResourceGroup:resourceGroup, IP:ipAddress, Location:location, Allocation:publicIPAllocationMethod, SKU:sku.name}" ^
+  --output table
+```
+
+Observed IPs:
+- `20.120.58.236`
+- `20.81.83.150`
+- `20.127.252.135`
+
+Then checked IP configuration mapping:
+
+EXECUTE
+
+```cmd
+az network public-ip list ^
+  --query "[].{Name:name, ResourceGroup:resourceGroup, IP:ipAddress, Location:location, Allocation:publicIPAllocationMethod, SKU:sku.name, IpConfig:ipConfiguration.id}" ^
+  --output table
+```
+
+Observed:
+- all three IPs were attached to the AKS load balancer
+- they were not loose/unattached public IPs
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.10 - MAP PUBLIC IPS TO KUBERNETES SERVICES
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+kubectl get svc -A
+```
+
+Observed:
+
+```text
+aks-mrgnc-surge-dev   emergency-surge-backend    LoadBalancer   20.81.83.150
+aks-mrgnc-surge-dev   emergency-surge-frontend   LoadBalancer   20.127.252.135
+aks-mrgnc-surge-qa    emergency-surge-backend    LoadBalancer   <pending>
+aks-mrgnc-surge-qa    emergency-surge-frontend   LoadBalancer   <pending>
+```
+
+Third public IP:
+- `20.120.58.236`
+
+Interpretation:
+- the third IP did not show as a normal Kubernetes Service external IP
+- it appears AKS-managed or load-balancer-related
+- do not delete it manually
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.11 - QA SMOKE TEST USING PORT-FORWARD
+----------------------------------------------------------------------
+
+Because Azure public IP creation was blocked, QA was tested using `kubectl port-forward`.
+
+Important behavior:
+- `kubectl port-forward` keeps running until stopped
+- the terminal stays occupied
+- the local port stays busy
+- stop it with `Ctrl + C`
+
+Backend port-forward:
+
+EXECUTE
+
+```cmd
+kubectl port-forward svc/emergency-surge-backend 4001:4001 -n aks-mrgnc-surge-qa
+```
+
+Expected:
+
+```text
+Forwarding from 127.0.0.1:4001 -> 4001
+Forwarding from [::1]:4001 -> 4001
+```
+
+In another terminal:
+
+EXECUTE
+
+```cmd
+curl http://localhost:4001
+```
+
+Observed:
+
+```json
+{"error":{"code":404,"message":"Route not found: GET /","correlationId":"...","details":{}}}
+```
+
+Interpretation:
+- backend is alive and responding
+- `/` is simply not a defined route
+- this is acceptable for connectivity proof
+
+Frontend port-forward:
+
+EXECUTE
+
+```cmd
+kubectl port-forward svc/emergency-surge-frontend 8080:80 -n aks-mrgnc-surge-qa
+```
+
+Browser:
+
+```text
+http://localhost:8080
+```
+
+Observed:
+- frontend loaded
+- backend status showed healthy/live
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.12 - PORT-FORWARD ERRORS AND FIXES
+----------------------------------------------------------------------
+
+Error:
+
+```text
+Unable to listen on port 8080
+Only one usage of each socket address is normally permitted
+```
+
+or:
+
+```text
+Unable to listen on port 4001
+Only one usage of each socket address is normally permitted
+```
+
+Meaning:
+- an older port-forward process is still running
+- or another local process owns that port
+
+Check ports:
+
+EXECUTE
+
+```cmd
+netstat -ano | findstr :8080
+netstat -ano | findstr :4001
+```
+
+Example observed:
+
+```text
+TCP 127.0.0.1:4001 0.0.0.0:0 LISTENING 25136
+TCP [::1]:4001     [::]:0    LISTENING 25136
+```
+
+Preferred fix:
+1. go to the terminal where port-forward is running
+2. press `Ctrl + C`
+3. verify the prompt returned
+
+Emergency fallback only if the terminal cannot be found:
+
+EXECUTE ONLY IF NEEDED
+
+```cmd
+taskkill /PID 25136 /F
+```
+
+Alternative workaround:
+Use different local ports.
+
+Frontend alternative:
+
+EXECUTE
+
+```cmd
+kubectl port-forward svc/emergency-surge-frontend 8081:80 -n aks-mrgnc-surge-qa
+```
+
+Browser:
+
+```text
+http://localhost:8081
+```
+
+Backend alternative:
+
+EXECUTE
+
+```cmd
+kubectl port-forward svc/emergency-surge-backend 4002:4001 -n aks-mrgnc-surge-qa
+```
+
+Test:
+
+EXECUTE
+
+```cmd
+curl http://localhost:4002
+```
+
+Status:
+- DOCUMENTED
+
+----------------------------------------------------------------------
+S.13 - SECTION S FINAL STATUS
+----------------------------------------------------------------------
+
+SECTION S - DEPLOY TO QA
+
+Completed:
+- backend QA image tag exists in ACR
+- frontend QA image tag exists in ACR
+- backend QA deployment applied
+- backend QA pod running
+- frontend QA deployment applied
+- frontend QA pod running
+- backend QA service created
+- frontend QA service created
+- backend reachable via port-forward
+- frontend reachable via port-forward
+- frontend UI loads
+- backend responds
+
+Blocked only for:
+- public external LoadBalancer IPs due to Azure public IP quota
+
+Correct conclusion:
+- SECTION S is DONE internally
+- external public access is blocked by Azure quota, not by Kubernetes/app failure
+
+Status:
+- DONE INTERNALLY
+- PUBLIC LOADBALANCER BLOCKED BY QUOTA
+
+======================================================================
+SECTION S.1 - POST-QA CLEANUP / RELEASE PUBLIC IPS
+======================================================================
+
+Goal:
+Release public IP pressure after DEV/QA screenshot and smoke-test proof.
+
+Important classification:
+- this is NOT SECTION T
+- this is not PROD deployment
+- this is a post-QA cleanup step
+- therefore it belongs as SECTION S.1
+
+Reason:
+- DEV backend and frontend were consuming public IPs
+- QA backend and frontend were requesting public IPs
+- Azure subscription/region allowed only 3 public IPs
+- QA was already proven internally using port-forward
+- DEV/QA public exposure was no longer needed for screenshots
+- PROD will need public IP room later
+
+----------------------------------------------------------------------
+S.1.1 - PATCH DEV SERVICES TO CLUSTERIP
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+kubectl patch svc emergency-surge-backend -n aks-mrgnc-surge-dev -p "{\"spec\":{\"type\":\"ClusterIP\"}}"
+kubectl patch svc emergency-surge-frontend -n aks-mrgnc-surge-dev -p "{\"spec\":{\"type\":\"ClusterIP\"}}"
+kubectl get svc -n aks-mrgnc-surge-dev
+```
+
+Observed:
+
+```text
+emergency-surge-backend    ClusterIP   ...   <none>   4001/TCP
+emergency-surge-frontend   ClusterIP   ...   <none>   80/TCP
+```
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.1.2 - PATCH QA SERVICES TO CLUSTERIP
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+kubectl patch svc emergency-surge-backend -n aks-mrgnc-surge-qa -p "{\"spec\":{\"type\":\"ClusterIP\"}}"
+kubectl patch svc emergency-surge-frontend -n aks-mrgnc-surge-qa -p "{\"spec\":{\"type\":\"ClusterIP\"}}"
+kubectl get svc -n aks-mrgnc-surge-qa
+```
+
+Observed:
+
+```text
+emergency-surge-backend    ClusterIP   ...   <none>   4001/TCP
+emergency-surge-frontend   ClusterIP   ...   <none>   80/TCP
+```
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.1.3 - VERIFY ALL SERVICES GLOBALLY
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+kubectl get svc -A
+```
+
+Observed:
+
+```text
+aks-mrgnc-surge-dev   emergency-surge-backend    ClusterIP   <none>
+aks-mrgnc-surge-dev   emergency-surge-frontend   ClusterIP   <none>
+aks-mrgnc-surge-qa    emergency-surge-backend    ClusterIP   <none>
+aks-mrgnc-surge-qa    emergency-surge-frontend   ClusterIP   <none>
+default               kubernetes                 ClusterIP   <none>
+kube-system           kube-dns                   ClusterIP   <none>
+kube-system           metrics-server             ClusterIP   <none>
+```
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.1.4 - VERIFY PUBLIC IP RELEASE
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+az network public-ip list ^
+  --query "[].{Name:name, ResourceGroup:resourceGroup, IP:ipAddress, Location:location, Allocation:publicIPAllocationMethod, SKU:sku.name, IpConfig:ipConfiguration.id}" ^
+  --output table
+```
+
+Observed:
+- public IP usage dropped from 3 to 1
+- remaining IP:
+  - `20.120.58.236`
+- remaining IP appears AKS-managed/load-balancer-related
+
+Meaning:
+- DEV public IPs were released
+- QA no longer requests public IPs
+- enough public IP headroom should now exist for PROD testing, unless Azure still enforces another hidden constraint
+
+Status:
+- DONE
+
+----------------------------------------------------------------------
+S.1.5 - HARMLESS ACCIDENTAL TERMINAL COMMAND
+----------------------------------------------------------------------
+
+Accidental input:
+
+```cmd
+emergency-surge-backend    ClusterIP
+```
+
+Windows response:
+
+```text
+'emergency-surge-backend' is not recognized as an internal or external command,
+operable program or batch file.
+```
+
+Impact:
+- no AKS impact
+- no Azure impact
+- no repo impact
+- harmless terminal typo
+
+Status:
+- DONE.
+
+----------------------------------------------------------------------
+S.1.6 - LOCAL YAML FILE HYGIENE
+----------------------------------------------------------------------
+
+Live AKS state was patched successfully, but local YAML files may still contain:
+
+```yaml
+type: LoadBalancer
+```
+
+If these files are applied later, they may recreate public IP pressure.
+
+Files to check/update:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\dev\backend-service.yaml
+D:\Ready to use\GITMS\ng-mrgc-ui\k8s\dev\frontend-service.yaml
+D:\Ready to use\GITMS\node-mrgc-api\k8s\qa\backend-service.yaml
+D:\Ready to use\GITMS\ng-mrgc-ui\k8s\qa\frontend-service.yaml
+```
+
+Change:
+
+```yaml
+type: LoadBalancer
+```
+
+to:
+
+```yaml
+type: ClusterIP
+```
+
+DO NOT EXECUTE
+
+Do not apply the DEV/QA service YAMLs again until they are checked and corrected:
+
+```cmd
+kubectl apply -f backend-service.yaml
+kubectl apply -f frontend-service.yaml
+```
+
+Status:
+- LIVE AKS CLEANUP DONE
+- LOCAL YAML HYGIENE DONE. 
+
+----------------------------------------------------------------------
+S.1.7 - SECTION S.1 FINAL STATUS
+----------------------------------------------------------------------
+
+Completed:
+- DEV backend service changed from LoadBalancer to ClusterIP
+- DEV frontend service changed from LoadBalancer to ClusterIP
+- QA backend service changed from LoadBalancer to ClusterIP
+- QA frontend service changed from LoadBalancer to ClusterIP
+- public IP usage reduced from 3 to 1
+- DEV/QA remain internally available inside AKS
+
+Still recommended:
+- update local DEV/QA service YAML files to `ClusterIP`
+
+Status:
+- DONE LIVE IN AKS.
+- DONE FILE HYGIENE. 
+
+======================================================================
+SECTION T - DEPLOY TO PROD
+======================================================================
+
+Use environment:
+- `mrgnc-surge-prod`
+
+Deploy to namespace:
+- `aks-mrgnc-surge-prod`
+
+Respect approval gate:
+- required for the future pipeline path
+- manual execution can be used first for proof, as done for Dev and QA
+
+Important correction:
+- SECTION T is NOT DONE
+- SECTION T has NOT STARTED
+- S.1 cleanup was not PROD deployment
+
+Definition of SECTION T done:
+1. create/check `k8s/prod` backend files
+2. create/check `k8s/prod` frontend files
+3. create/promote backend PROD image tag
+4. create/promote frontend PROD image tag
+5. apply backend PROD deployment/service
+6. apply frontend PROD deployment/service
+7. verify PROD pods
+8. verify PROD services
+9. get PROD public IPs, if using LoadBalancer
+10. browser-test PROD frontend
+11. verify frontend/backend integration
+12. capture screenshots
+
+Recommended PROD image tags:
+- backend:
+  - `acremergencysurge.azurecr.io/node-mrgc-api-image:prod-v1`
+- frontend:
+  - `acremergencysurge.azurecr.io/ng-mrgc-ui-image:prod-v1`
+
+Recommended PROD exposure for the current proof:
+- safest immediate path:
+  - backend service: `LoadBalancer`
+  - frontend service: `LoadBalancer`
+- reason:
+  - Angular browser-side code cannot call Kubernetes `ClusterIP` directly
+  - current app pattern previously used a public backend endpoint from browser-side frontend code
+  - two PROD public IPs should fit now because DEV/QA public IPs were released
+
+Alternative future architecture:
+- frontend public LoadBalancer or ingress
+- backend internal ClusterIP
+- frontend routes API calls through a proxy/ingress path
+- this is cleaner, but not required for the immediate proof unless the app is modified accordingly
+
+----------------------------------------------------------------------
+T.1 - CREATE OR CHECK PROD FOLDERS
+----------------------------------------------------------------------
+
+Expected folders:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\prod
+D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod
+```
+
+EXECUTE
+
+```cmd
+mkdir "D:\Ready to use\GITMS\node-mrgc-api\k8s\prod"
+mkdir "D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod"
+```
+
+If Windows says the directory already exists, that is fine.
+
+----------------------------------------------------------------------
+T.2 - COPY QA MANIFESTS TO PROD AS STARTING POINT
+----------------------------------------------------------------------
+
+Backend:
+
+EXECUTE
+
+```cmd
+copy "D:\Ready to use\GITMS\node-mrgc-api\k8s\qa\backend-deployment.yaml" "D:\Ready to use\GITMS\node-mrgc-api\k8s\prod\backend-deployment.yaml"
+copy "D:\Ready to use\GITMS\node-mrgc-api\k8s\qa\backend-service.yaml" "D:\Ready to use\GITMS\node-mrgc-api\k8s\prod\backend-service.yaml"
+```
+
+Frontend:
+
+EXECUTE
+
+```cmd
+copy "D:\Ready to use\GITMS\ng-mrgc-ui\k8s\qa\frontend-deployment.yaml" "D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod\frontend-deployment.yaml"
+copy "D:\Ready to use\GITMS\ng-mrgc-ui\k8s\qa\frontend-service.yaml" "D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod\frontend-service.yaml"
+```
+
+----------------------------------------------------------------------
+T.3 - EDIT PROD BACKEND DEPLOYMENT
+----------------------------------------------------------------------
+
+File:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\prod\backend-deployment.yaml
+```
+
+Required values:
+
+```yaml
+namespace: aks-mrgnc-surge-prod
+```
+
+and:
+
+```yaml
+image: acremergencysurge.azurecr.io/node-mrgc-api-image:prod-v1
+```
+
+----------------------------------------------------------------------
+T.4 - EDIT PROD BACKEND SERVICE
+----------------------------------------------------------------------
+
+File:
+
+```text
+D:\Ready to use\GITMS\node-mrgc-api\k8s\prod\backend-service.yaml
+```
+
+Required namespace:
+
+```yaml
+namespace: aks-mrgnc-surge-prod
+```
+
+For immediate browser/demo proof:
+
+```yaml
+type: LoadBalancer
+```
+
+Expected port:
+
+```yaml
+port: 4001
+targetPort: 4001
+```
+
+----------------------------------------------------------------------
+T.5 - EDIT PROD FRONTEND DEPLOYMENT
+----------------------------------------------------------------------
+
+File:
+
+```text
+D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod\frontend-deployment.yaml
+```
+
+Required values:
+
+```yaml
+namespace: aks-mrgnc-surge-prod
+```
+
+and:
+
+```yaml
+image: acremergencysurge.azurecr.io/ng-mrgc-ui-image:prod-v1
+```
+
+----------------------------------------------------------------------
+T.6 - EDIT PROD FRONTEND SERVICE
+----------------------------------------------------------------------
+
+File:
+
+```text
+D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod\frontend-service.yaml
+```
+
+Required namespace:
+
+```yaml
+namespace: aks-mrgnc-surge-prod
+```
+
+For immediate browser/demo proof:
+
+```yaml
+type: LoadBalancer
+```
+
+Expected port:
+
+```yaml
+port: 80
+targetPort: 80
+```
+
+----------------------------------------------------------------------
+T.7 - VERIFY OR CREATE PROD NAMESPACE
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+kubectl get ns
+```
+
+If `aks-mrgnc-surge-prod` does not exist:
+
+EXECUTE
+
+```cmd
+kubectl create namespace aks-mrgnc-surge-prod
+```
+
+Verify:
+
+EXECUTE
+
+```cmd
+kubectl get ns
+```
+
+Expected:
+- `aks-mrgnc-surge-prod`
+
+----------------------------------------------------------------------
+T.8 - PROMOTE IMAGES TO PROD TAGS
+----------------------------------------------------------------------
+
+Backend:
+
+EXECUTE
+
+```cmd
+az acr import ^
+  --name acremergencysurge ^
+  --source acremergencysurge.azurecr.io/node-mrgc-api-image:qa-v1 ^
+  --image node-mrgc-api-image:prod-v1
+```
+
+Frontend:
+
+EXECUTE
+
+```cmd
+az acr import ^
+  --name acremergencysurge ^
+  --source acremergencysurge.azurecr.io/ng-mrgc-ui-image:qa-v1 ^
+  --image ng-mrgc-ui-image:prod-v1
+```
+
+Verify backend:
+
+EXECUTE
+
+```cmd
+az acr repository show-tags ^
+  --name acremergencysurge ^
+  --repository node-mrgc-api-image ^
+  --output table
+```
+
+Expected:
+- `dev`
+- `qa-v1`
+- `prod-v1`
+
+Verify frontend:
+
+EXECUTE
+
+```cmd
+az acr repository show-tags ^
+  --name acremergencysurge ^
+  --repository ng-mrgc-ui-image ^
+  --output table
+```
+
+Expected:
+- `dev-v2`
+- `qa-v1`
+- `prod-v1`
+
+----------------------------------------------------------------------
+T.9 - APPLY PROD BACKEND FIRST
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+cd /d "D:\Ready to use\GITMS\node-mrgc-api\k8s\prod"
+
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f backend-service.yaml
+kubectl rollout status deployment/emergency-surge-backend -n aks-mrgnc-surge-prod
+kubectl get all -n aks-mrgnc-surge-prod
+kubectl get svc -n aks-mrgnc-surge-prod
+```
+
+Expected:
+- backend deployment created/configured
+- backend pod `1/1 Running`
+- backend service created
+- backend service gets public IP if type is `LoadBalancer`
+
+----------------------------------------------------------------------
+T.10 - APPLY PROD FRONTEND SECOND
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+cd /d "D:\Ready to use\GITMS\ng-mrgc-ui\k8s\prod"
+
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f frontend-service.yaml
+kubectl rollout status deployment/emergency-surge-frontend -n aks-mrgnc-surge-prod
+kubectl get all -n aks-mrgnc-surge-prod
+kubectl get svc -n aks-mrgnc-surge-prod
+```
+
+Expected:
+- frontend deployment created/configured
+- frontend pod `1/1 Running`
+- frontend service created
+- frontend service gets public IP if type is `LoadBalancer`
+
+----------------------------------------------------------------------
+T.11 - WAIT FOR PROD EXTERNAL IPS
+----------------------------------------------------------------------
+
+EXECUTE
+
+```cmd
+kubectl get svc -n aks-mrgnc-surge-prod
+```
+
+Expected if using two LoadBalancers:
+
+```text
+emergency-surge-backend    LoadBalancer   ...   <backend-public-ip>    4001:xxxxx/TCP
+emergency-surge-frontend   LoadBalancer   ...   <frontend-public-ip>   80:xxxxx/TCP
+```
+
+If `<pending>` lasts more than 5-10 minutes:
+
+EXECUTE
+
+```cmd
+kubectl describe svc emergency-surge-frontend -n aks-mrgnc-surge-prod
+kubectl describe svc emergency-surge-backend -n aks-mrgnc-surge-prod
+kubectl get events -n aks-mrgnc-surge-prod --sort-by=.lastTimestamp
+```
+
+Likely issue if it fails:
+- `PublicIPCountLimitReached`
+
+If that happens:
+- do not delete random Azure public IPs manually
+- map services first with `kubectl get svc -A`
+- inspect public IPs with `az network public-ip list`
+
+----------------------------------------------------------------------
+T.12 - PROD SMOKE TESTS
+----------------------------------------------------------------------
+
+Frontend browser test:
+
+```text
+http://<prod-frontend-public-ip>
+```
+
+Backend direct test:
+
+EXECUTE
+
+```cmd
+curl http://<prod-backend-public-ip>:4001
+```
+
+Acceptable backend `/` response:
+
+```json
+{"error":{"code":404,"message":"Route not found: GET /", ...}}
+```
+
+Meaning:
+- backend is reachable
+- `/` is simply not a defined route
+
+If a known health endpoint exists, use that instead.
+
+DO NOT EXECUTE UNLESS ENDPOINT EXISTS
+
+```cmd
+curl http://<prod-backend-public-ip>:4001/health
+```
+
+----------------------------------------------------------------------
+T.13 - PROD SCREENSHOT CHECKLIST
+----------------------------------------------------------------------
+
+Capture:
+- Azure Portal ACR backend `prod-v1` tag
+- Azure Portal ACR frontend `prod-v1` tag
+- `kubectl get all -n aks-mrgnc-surge-prod`
+- `kubectl get svc -n aks-mrgnc-surge-prod`
+- browser showing PROD frontend
+- frontend UI showing backend status healthy/live, if available
+- optional backend curl proof
+
+----------------------------------------------------------------------
+T.14 - PROD CLEANUP AFTER SCREENSHOTS, OPTIONAL
+----------------------------------------------------------------------
+
+After PROD screenshots, decide whether to keep public PROD exposure.
+
+If public PROD exposure is no longer needed:
+
+EXECUTE ONLY AFTER SCREENSHOTS ARE DONE
+
+```cmd
+kubectl patch svc emergency-surge-backend -n aks-mrgnc-surge-prod -p "{\"spec\":{\"type\":\"ClusterIP\"}}"
+kubectl patch svc emergency-surge-frontend -n aks-mrgnc-surge-prod -p "{\"spec\":{\"type\":\"ClusterIP\"}}"
+```
+
+Then verify:
+
+EXECUTE
+
+```cmd
+kubectl get svc -n aks-mrgnc-surge-prod
+
+az network public-ip list ^
+  --query "[].{Name:name, ResourceGroup:resourceGroup, IP:ipAddress, Location:location, Allocation:publicIPAllocationMethod, SKU:sku.name, IpConfig:ipConfiguration.id}" ^
+  --output table
+```
+
+Status:
+- DONE.
+
+======================================================================
+SECTION U - ROLLBACK / RECOVERY PROOF
+======================================================================
+
+Goal:
+Capture proof that the deployment can recover from a bad or unwanted app version.
+
+Be careful with wording:
+- Terraform is mainly for infrastructure state
+- application rollback is usually an AKS/Kubernetes deployment concern
+
+For the showcase, capture proof of one of these:
+1. redeploy previous image tag
+2. Kubernetes rollout recovery
+3. quick recovery from bad deployment
+
+Recommended current approach:
+- use Kubernetes deployment history and image tag replacement
+- avoid destructive changes
+- do not break stable proof unless the recovery path is understood
+
+Possible rollback proof options:
+
+Option 1:
+Redeploy a previous image tag.
+Example:
+- deploy `prod-v1`
+- then deploy `prod-v0` or known previous tag
+- show rollout status and restored health
+
+Option 2:
+Use Kubernetes rollout undo.
+Possible command pattern:
+
+DO NOT EXECUTE UNTIL READY
+
+```cmd
+kubectl rollout history deployment/emergency-surge-frontend -n aks-mrgnc-surge-prod
+kubectl rollout undo deployment/emergency-surge-frontend -n aks-mrgnc-surge-prod
+kubectl rollout status deployment/emergency-surge-frontend -n aks-mrgnc-surge-prod
+```
+
+Option 3:
+Restart/reapply known-good deployment after a bad image attempt.
+
+Proof to capture:
+- deployment history
+- failed or changed rollout
+- rollback/redeploy command
+- successful rollout after recovery
+- frontend/backend health restored
+
+Status:
+- DONE.
+
+======================================================================
+SECTION V - SCREENSHOT CHECKLIST
+======================================================================
+
+Capture these:
+
+General Azure DevOps / GitHub:
+1. Azure DevOps project home
+2. GitHub-connected pipeline
+3. Environments list
+4. Azure service connection list
+5. first pipeline bootstrap
+6. parallel jobs page showing current state
+7. self-hosted agent online / listening for jobs
+
+Terraform / Infrastructure:
+8. Terraform plan
+9. Terraform apply
+10. ACR created
+11. AKS created
+12. `kubectl get nodes`
+13. `kubectl get ns`
+14. storage account overview for Terraform backend
+15. `tfstate` container
+16. `dev.terraform.tfstate` blob
+17. successful final pipeline run with remote backend
+
+ACR:
+18. backend ACR repo/tag `dev`
+19. frontend ACR repo/tag `dev` or `dev-v2`
+20. backend ACR repo/tag `qa-v1`
+21. frontend ACR repo/tag `qa-v1`
+22. backend ACR repo/tag `prod-v1`, after SECTION T
+23. frontend ACR repo/tag `prod-v1`, after SECTION T
+
+Dev:
+24. backend deployment running in Dev
+25. frontend deployment running in Dev
+26. `kubectl get all -n aks-mrgnc-surge-dev`
+27. original Dev public app/browser proof, if already captured
+28. post-cleanup Dev services as `ClusterIP`, from SECTION S.1
+
+QA:
+29. backend QA deployment running
+30. frontend QA deployment running
+31. `kubectl get all -n aks-mrgnc-surge-qa`
+32. QA public LoadBalancer pending/quota evidence
+33. `PublicIPCountLimitReached` diagnostic evidence
+34. QA port-forward terminal proof
+35. QA frontend browser proof through localhost
+36. post-cleanup QA services as `ClusterIP`, from SECTION S.1
+
+PROD:
+37. `k8s/prod` backend files
+38. `k8s/prod` frontend files
+39. backend PROD deployment running
+40. frontend PROD deployment running
+41. `kubectl get all -n aks-mrgnc-surge-prod`
+42. `kubectl get svc -n aks-mrgnc-surge-prod`
+43. PROD frontend browser proof
+44. PROD backend connectivity proof
+
+Recovery:
+45. recovery / redeploy proof
+46. deployment history
+47. successful recovery health check
+
+Final packaging:
+48. clean repo structure
+49. docs folder
+50. architecture folder
+51. screenshots folder
+52. README updates
+53. final PDF guide
+54. LinkedIn post draft
+
+Status:
+- PARTIAL BUT MUCH STRONGER
+
+======================================================================
+SECTION W - FINAL DELIVERABLES
+======================================================================
+
+At the end, prepare:
+- clean GitHub repos
+- updated READMEs
+- docs folder
+- architecture folder
+- screenshots folder
+- PDF guide
+- LinkedIn post draft
+
+README updates should honestly say:
+- GitHub is the code/source host
+- Azure DevOps is the CI/CD orchestrator
+- Terraform provisions Azure infrastructure
+- AKS hosts the app
+- self-hosted Azure DevOps agent was used because Microsoft-hosted parallelism was unavailable
+- DEV and QA were proven manually first
+- Terraform plan/apply were proven through Azure DevOps pipeline with remote state
+- QA public exposure hit Azure public IP quota, and QA was validated internally using port-forward
+- DEV/QA public IPs were released by converting services to ClusterIP
+- PROD deployment proof belongs to SECTION T and is still required until completed
+
+Final PDF guide should include:
+- architecture overview
+- repo responsibilities
+- pipeline design
+- Terraform remote state story
+- self-hosted agent story
+- AKS deployment story
+- Dev proof
+- QA proof
+- public IP quota issue and workaround
+- PROD proof once completed
+- rollback/recovery proof once completed
+- screenshot appendix
+
+LinkedIn post should emphasize:
+- realistic CI/CD delivery path
+- GitHub + Azure DevOps hybrid separation of responsibilities
+- Terraform remote backend
+- AKS namespace-based promotion
+- real-world troubleshooting
+- public IP quota constraint and safe cleanup
+- not overclaiming pipeline automation where manual proof was used
+
+Status:
+- PENDING
+
+END OF DETAILED GUIDE v15

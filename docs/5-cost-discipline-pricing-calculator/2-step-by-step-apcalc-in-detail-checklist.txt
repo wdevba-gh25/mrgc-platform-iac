@@ -1,0 +1,361 @@
+STEP BY STEP APCALC IN DETAIL v2
+Azure Pricing Calculator + Cost Management Evidence
+Emergency Surge Demo - Detailed Cost-Control Procedure
+
+STATUS
+DONE
+
+PURPOSE
+This file is the detailed working guide for the Azure Pricing Calculator and Cost Management stage.
+
+The goal was not to build new infrastructure.
+The goal was to:
+1. capture actual cost evidence
+2. estimate expected cost
+3. compare expected vs actual
+4. identify active cost drivers
+5. destroy/disable project resources before unnecessary spend continued
+
+COMPLETED BEFORE THIS STAGE
+- Azure AKS/Terraform/ACR proof completed
+- Azure Load Testing proof completed
+- Application Insights/Azure Monitor proof completed
+- KQL P50/P95 evidence completed
+
+SECTION A - CONFIRM COST MANAGEMENT / BILLING ACCESS
+Captured:
+- Cost Management + Billing page
+- billing account/scope active
+- billing account owner role visible
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 01 - Billing scope active / billing account owner
+
+SECTION B - CAPTURE ACCUMULATED ACTUAL COST AND FORECAST
+Captured:
+- Cost Analysis accumulated view
+- actual cost
+- forecast cost
+- May 2026 date range
+
+Values captured:
+- actual cost: about $9.22 at initial accumulated screenshot
+- forecast cost: about $27.24 at initial accumulated screenshot
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 02 - Cost Analysis accumulated cost and forecast
+
+SECTION C - COST ANALYSIS BY SERVICE NAME
+Captured:
+- Cost Analysis grouped by Service name
+
+Visible cost drivers:
+- Virtual Machines: about $5.72
+- Storage: about $1.80
+- Virtual Network: about $0.99
+- Container Registry: about $0.47
+- Azure App Testing: about $0.25
+- Bandwidth: less than $0.01
+- Load Balancer: $0.00
+
+Important interpretation:
+The biggest actual cost driver was Virtual Machines, which represented AKS worker-node compute.
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 03 - Cost Analysis grouped by Service name
+
+SECTION D - COST ANALYSIS BY RESOURCE GROUP
+Captured:
+- Cost Analysis grouped by Resource group
+
+Final interpretation:
+The main project spend was concentrated around the Emergency Surge platform resources, not the Terraform state backend.
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 04 - Cost Analysis grouped by Resource group
+
+SECTION E - COST ANALYSIS BY RESOURCE
+Captured:
+- Cost Analysis grouped by Resource
+
+This provided individual-resource cost evidence before cleanup.
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 05 - Cost Analysis grouped by Resource
+
+SECTION F - OPEN AZURE PRICING CALCULATOR
+Captured:
+- empty estimate starting point
+- $0.00 upfront
+- $0.00 monthly
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 06 - Azure Pricing Calculator empty estimate
+
+SECTION G - ADD VIRTUAL MACHINES ESTIMATE
+Reason:
+Cost Management showed Virtual Machines as the largest cost driver.
+
+Model:
+- one Linux VM approximation for AKS worker-node compute
+- Region: East US
+- OS/Image: Ubuntu / Linux
+- Tier: Standard
+- Quantity: 1
+- Hours: 730 per month
+- closest available VM option used in calculator
+
+Estimated monthly cost:
+- about $70.08
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 07 - Pricing Calculator VM estimate for AKS worker node compute
+
+SECTION H - ADD AZURE CONTAINER REGISTRY ESTIMATE
+Reason:
+Cost Management showed Container Registry actual spend.
+
+Model:
+- Region: East US
+- Tier: Basic
+- Registry count: 1
+- Days: 30
+- extra storage minimal/default
+
+Estimated monthly cost:
+- about $5.00
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 08 - Pricing Calculator ACR Basic estimate
+
+SECTION I - ADD STORAGE ACCOUNT ESTIMATE
+Reason:
+Terraform remote state used Azure Storage, and Storage appeared as a visible cost driver.
+
+Model:
+- Region: East US
+- Type: Block Blob Storage / General Purpose v2
+- Performance: Standard
+- Access tier: Hot
+- Redundancy: LRS
+- Capacity: 1 GB
+- low/default operations
+
+Estimated monthly cost:
+- about $1.06
+
+Status:
+- DONE
+
+Evidence labels:
+- APCalc Evidence 09A - Pricing Calculator Storage Account settings
+- APCalc Evidence 09B - Pricing Calculator Storage Account monthly estimate
+
+SECTION J - ADD AZURE MONITOR ESTIMATE
+Reason:
+Application Insights and KQL request telemetry were part of Stage 3.
+
+Model:
+- Region: East US
+- default/minimum values
+- no production-scale alerting
+- no ITSM integration
+- low demo telemetry volume
+
+Estimated monthly cost:
+- $0.00 under the calculator's default/minimal configuration shown
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 10 - Pricing Calculator Azure Monitor default/minimal estimate
+
+SECTION K - ADD AZURE APP TESTING / LOAD TESTING ESTIMATE
+Reason:
+Azure Load Testing was used for runtime evidence, and Azure App Testing appeared in actual Cost Management.
+
+Model:
+- Region: East US
+- Azure Load Testing
+- 5 virtual users
+- 2 minutes
+- 1 test run per month
+- about 2 virtual user hours
+- Playwright Workspaces minimized because Playwright was not used
+
+Estimated monthly cost:
+- about $0.30
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 11 - Pricing Calculator Azure App Testing Load Testing estimate
+
+SECTION L - FINAL PRICING CALCULATOR SUMMARY
+Final visible estimate:
+- upfront cost: $0.00
+- monthly cost: about $76.44
+
+Included monthly estimates:
+- Virtual Machines: about $70.08
+- Azure Container Registry: about $5.00
+- Storage Accounts: about $1.06
+- Azure Monitor: about $0.00
+- Azure App Testing: about $0.30
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 12 - Pricing Calculator final estimate summary
+
+SECTION M - ESTIMATE VS ACTUAL COMPARISON
+Actual Cost Management:
+- actual cost: about $9.82
+- forecast: about $27.84
+
+Pricing Calculator:
+- simplified full-month estimate: about $76.44/month
+
+Interpretation:
+The Pricing Calculator modeled a full-month steady-state estimate, while Cost Management showed partial-month actual usage from a short-lived demo environment. The difference was expected because the project resources were created, tested, deleted/recreated, and used only for limited proof windows rather than a full 730-hour production month.
+
+Status:
+- DONE
+
+SECTION N - PRE-DESTRUCTION RESOURCE INVENTORY
+Captured:
+- Terraform state storage account overview
+- Terraform state storage settings/networking
+- Terraform state storage resource group proof
+- final platform resource inventory before cleanup
+
+Final platform inventory proved rg-emergency-surge-platform contained:
+- acremergencysurge: Container Registry
+- aks-emergency-surge: Kubernetes service
+- alt-emergency-surge-loadtest: Azure Load Testing
+- appi-emergency-surge-backend: Application Insights
+- Application Insights Smart Detection Action group
+
+Status:
+- DONE
+
+Evidence labels:
+- APCalc Evidence 13A - Terraform state storage account overview
+- APCalc Evidence 13B - Terraform state storage settings / networking
+- APCalc Evidence 13C - Terraform state storage resource group proof
+- APCalc Evidence 14 - Final platform resource inventory before cleanup
+
+SECTION O - DELETE MAIN PLATFORM RESOURCE GROUP
+Command executed:
+az group delete --name rg-emergency-surge-platform --yes --no-wait
+
+Deletion verified:
+- rg-emergency-surge-platform entered Deleting
+- AKS managed resource group also entered Deleting
+- AKS managed resource group disappeared
+- main platform resource group disappeared
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 15 - Main platform and AKS managed resource groups deleting/deleted
+
+SECTION P - DELETE TERRAFORM STATE RESOURCE GROUP
+Command executed:
+az group delete --name rg-tfstate-emergency-surge --yes --no-wait
+
+Deletion verified:
+- rg-tfstate-emergency-surge entered Deleting
+- then disappeared from resource group list
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 16 - Terraform state resource group deleting/deleted
+
+SECTION Q - FINAL RESOURCE GROUP LIST AFTER CLEANUP
+Final remaining resource groups:
+- VisualStudioOnline-...
+- NetworkWatcherRG
+- DefaultResourceGroup-EUS
+
+Deleted/gone project groups:
+- rg-emergency-surge-platform
+- MC_rg-emergency-surge-platform_aks-emergency-surge_eastus
+- rg-tfstate-emergency-surge
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 17 - Final resource group list after cleanup
+
+SECTION R - AZURE CREDIT / PAYMENT METHOD SAFETY CHECK
+Captured:
+- Azure credits available balance
+- default payment method area
+- statement that Azure credits are used before the default payment method
+
+Visible credit balance:
+- about $181.78
+
+Interpretation:
+At the time of capture, project spend had been deducted from credits, and the main project resources had already been deleted.
+
+Status:
+- DONE
+
+Evidence label:
+- APCalc Evidence 18 - Azure credits remaining / payment method check
+
+FINAL COST-CONTROL STORY
+Actual cost captured:
+- about $9.82
+
+Forecast captured:
+- about $27.84
+
+Pricing Calculator estimate:
+- about $76.44/month
+
+Azure credits remaining:
+- about $181.78
+
+Cleanup completed:
+- main platform resource group deleted
+- AKS managed resource group deleted
+- Terraform state backend resource group deleted
+
+STATUS:
+- DONE
+
+END OF STEP BY STEP APCALC IN DETAIL v2

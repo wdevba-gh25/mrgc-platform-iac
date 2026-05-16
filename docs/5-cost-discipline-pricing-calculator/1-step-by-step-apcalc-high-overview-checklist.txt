@@ -1,0 +1,169 @@
+STEP BY STEP APCALC HIGH OVERVIEW v4
+Azure Pricing Calculator + Cost Management Evidence
+Emergency Surge Demo - Cost Estimation / Cost Control Stage
+
+STATUS
+DONE
+
+PURPOSE
+This is the high-level guide for the Azure Pricing Calculator and Cost Management stage.
+
+This file is strategic.
+It does not replace the detailed procedure guide.
+
+FINAL OUTCOME
+The Azure Pricing Calculator / Cost Management stage was completed.
+
+The project captured:
+- actual cost
+- forecast cost
+- cost by service
+- cost by resource group
+- cost by resource
+- Azure Pricing Calculator estimate
+- estimate vs actual explanation
+- pre-destruction resource inventory
+- project resource group deletion evidence
+- Azure credit balance evidence
+
+CURRENT PROJECT POSITION
+Completed:
+1. Azure AKS / Terraform / ACR / Dev deployment proof
+2. Azure Load Testing evidence
+3. Application Insights / Azure Monitor evidence
+4. Azure Pricing Calculator / Cost Management evidence
+5. Azure cleanup after evidence capture
+
+Paused / separate:
+- LinkedIn post publication and profile updates
+
+MAIN QUESTION ANSWERED
+This stage answered:
+
+- What Azure resources were created?
+- Which services consumed money?
+- What would the simplified architecture cost as a full-month estimate?
+- How did the estimate compare to actual Azure Cost Management data?
+- What was destroyed or disabled before the free-credit window became risky?
+
+WHY THIS STAGE MATTERS
+The project already proved technical delivery.
+This stage proved cost-awareness and operational discipline.
+
+The final narrative:
+- The platform was built.
+- The runtime was tested.
+- Observability was added.
+- Costs were estimated and reviewed.
+- Resources were deleted after evidence capture.
+
+CORE EVIDENCE CAPTURED
+1. Billing scope active / billing owner
+2. Accumulated actual cost and forecast
+3. Cost by service name
+4. Cost by resource group
+5. Cost by resource
+6. Azure Pricing Calculator empty estimate
+7. VM estimate for AKS worker-node compute approximation
+8. Azure Container Registry Basic estimate
+9. Storage Account minimal estimate
+10. Azure Monitor minimal/default estimate
+11. Azure App Testing / Azure Load Testing estimate
+12. Final Pricing Calculator estimate summary
+13. Terraform state storage evidence
+14. Final platform resource inventory before cleanup
+15. Main platform resource group deleting/deleted
+16. Terraform state resource group deleting/deleted
+17. Final resource group list after cleanup
+18. Azure credits remaining/payment-method safety check
+
+LIKELY COST DRIVERS CONFIRMED
+Actual Cost Management showed these important cost areas:
+
+- Virtual Machines
+- Storage
+- Virtual Network
+- Container Registry
+- Azure App Testing
+- Bandwidth
+- Load Balancer / networking minor items
+
+Important interpretation:
+AKS itself may not appear as the dominant service label.
+The AKS worker-node compute appeared under Virtual Machines and was the largest actual cost driver.
+
+FINAL PRICING CALCULATOR ESTIMATE
+Final simplified estimate:
+- upfront cost: $0.00
+- monthly cost: about $76.44
+
+Included products:
+- Virtual Machines: about $70.08
+- Azure Container Registry: about $5.00
+- Storage Accounts: about $1.06
+- Azure Monitor: about $0.00 under default/minimal demo assumptions
+- Azure App Testing: about $0.30
+
+ACTUAL COST MANAGEMENT VALUES
+Captured:
+- actual cost: about $9.82
+- forecast: about $27.84
+- Azure credits remaining after cleanup: about $181.78
+
+IMPORTANT DISTINCTION
+Azure Pricing Calculator:
+- forward-looking full-month estimate
+- based on simplified assumptions
+
+Azure Cost Management:
+- actual subscription cost/usage data
+- source of truth for real spend
+
+The estimate was intentionally higher than actual captured cost because:
+- the environment was short-lived
+- resources were deleted/recreated
+- current Dev was used only for evidence capture
+- the calculator modeled a full-month baseline
+- Cost Management reflected partial-month usage
+- telemetry/load-testing cost depends on actual usage
+
+RESOURCE CLEANUP
+Deleted/gone:
+- rg-emergency-surge-platform
+- MC_rg-emergency-surge-platform_aks-emergency-surge_eastus
+- rg-tfstate-emergency-surge
+
+Remaining groups after cleanup:
+- VisualStudioOnline-...
+- NetworkWatcherRG
+- DefaultResourceGroup-EUS
+
+Those remaining groups were not the Emergency Surge platform groups.
+
+LINKEDIN USE
+This stage supports Post 4:
+- Application Insights, KQL, and Cost Control
+
+Good public angle:
+Cloud delivery is not only about building. It is also about observing, estimating, comparing actual spend, and cleaning up resources before costs keep running.
+
+WHAT THIS STAGE IS NOT
+This is not a full FinOps certification exercise.
+This is not enterprise chargeback/showback.
+This is not a perfect production monthly forecast.
+
+It is a practical cost-control proof for a portfolio MVP.
+
+COMPLETION CRITERIA
+Completed:
+- Pricing Calculator estimate captured
+- Cost Management actual spend captured
+- resource/cost drivers identified
+- estimate vs actual explanation completed
+- cost-generating project resource groups deleted
+- cleanup evidence captured
+
+STATUS:
+- DONE
+
+END OF STEP BY STEP APCALC HIGH OVERVIEW v4

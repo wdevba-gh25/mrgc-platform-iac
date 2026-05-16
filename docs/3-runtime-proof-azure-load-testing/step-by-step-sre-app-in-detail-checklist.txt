@@ -1,0 +1,317 @@
+STEP BY STEP SRE APP IN DETAIL v4
+Emergency Surge Demo, runtime validation + Azure Load Testing + AKS logs + Application Insights / Azure Monitor
+
+IMPORTANT v4 UPDATE
+This guide updates v3 after Stage 3 Application Insights / Azure Monitor was completed.
+
+In v3, Application Insights was still planned.
+In v4, Application Insights / Azure Monitor is DONE.
+
+This guide now separates:
+
+- completed current Dev runtime proof
+- completed current Dev Azure Load Testing proof
+- completed current Dev AKS/container log proof
+- completed current Dev Application Insights / Azure Monitor proof
+- completed KQL P50/P95 proof
+- historical Dev -> QA -> Prod -> rollback/recovery lifecycle evidence
+
+MAIN IDEA
+The platform and deployment proof exist in two categories:
+
+1. Historical lifecycle proof
+   - DEV -> QA -> PROD -> rollback/recovery was completed and screenshots were captured before later cost-control deletion/rebuild.
+   - That evidence remains valid as historical lifecycle evidence.
+
+2. Current rebuilt Dev proof
+   - Terraform backend was recreated.
+   - AKS and ACR were recreated.
+   - Dev namespace was redeployed.
+   - Backend and frontend ran in Dev during evidence capture.
+   - Backend /health and /loadtest/ping were reachable through the current Dev backend LoadBalancer.
+   - Azure Load Testing was run against /loadtest/ping.
+   - Backend container logs proved AKS backend traffic.
+   - Application Insights captured request telemetry from the AKS backend.
+   - KQL produced P50/P95 request evidence.
+
+GOAL
+Produce runtime and SRE-style proof supporting a credible platform reliability narrative:
+
+- live Azure-hosted app proof
+- backend health proof
+- Kubernetes pod/service proof
+- container log proof
+- clean SRE latency endpoint proof
+- Azure Load Testing proof
+- Application Insights / Azure Monitor request telemetry
+- KQL P50/P95 evidence
+- zero-failure request summary
+- cost-aware cleanup after evidence capture
+
+CURRENT VERIFIED DEV STATE DURING EVIDENCE CAPTURE
+
+Resource group:
+- rg-emergency-surge-platform
+
+ACR:
+- acremergencysurge
+
+AKS:
+- aks-emergency-surge
+
+Namespaces:
+- aks-mrgnc-surge-dev: Active and deployed during evidence capture
+- aks-mrgnc-surge-qa: Active but empty after rebuild
+- aks-mrgnc-surge-prod: Active but empty after rebuild
+
+Current Dev backend during load test:
+- service type: LoadBalancer
+- external IP: 48.194.14.121
+- port: 4001
+- image: acremergencysurge.azurecr.io/node-mrgc-api-image:dev-loadtest-v1
+
+Current Dev backend after Application Insights:
+- image: acremergencysurge.azurecr.io/node-mrgc-api-image:dev-appinsights-v2
+- Application Insights initialized in AKS pod
+
+Current Dev frontend:
+- service type: LoadBalancer
+- external IP: 48.206.147.176
+- port: 80
+- image: acremergencysurge.azurecr.io/ng-mrgc-ui-image:dev-v2
+
+NOTE
+The Azure environment used for this evidence was later deleted for cost-control reasons.
+
+SECTION A - CONFIRM LIVE AZURE APP
+Completed checks:
+- current Dev frontend ran behind Azure LoadBalancer
+- current Dev backend ran behind Azure LoadBalancer
+- backend /health worked from public backend IP
+- backend /loadtest/ping worked from public backend IP
+- backend pod was Running
+- frontend pod was Running
+- services had external IPs
+
+Status:
+- DONE for current rebuilt Dev during evidence capture
+
+SECTION B - CAPTURE RUNTIME LOGS
+Completed:
+- listed pods in Dev namespace
+- inspected backend logs with kubectl logs
+- generated /health and /loadtest/ping traffic
+- confirmed logs contained request method, URL, status, responseTimeMs, and correlationId
+
+Status:
+- DONE
+
+SECTION C - ADD LIGHTWEIGHT LOAD-TEST ENDPOINT
+Implemented:
+- GET /loadtest/ping
+- deterministic JSON payload
+- timestamp
+- uptimeSec
+- correlationId
+- no dependency on simulator flow
+- no frontend/browser timing noise
+
+Implementation path:
+1. route added in backend
+2. locally validated
+3. mirrored into deployable Git repo
+4. committed and pushed
+5. backend Docker image rebuilt
+6. image pushed to ACR with immutable tag dev-loadtest-v1
+7. AKS backend deployment updated
+8. /loadtest/ping verified from Azure
+
+Status:
+- DONE
+
+SECTION D - RUN AZURE LOAD TESTING
+Target:
+- GET http://48.194.14.121:4001/loadtest/ping
+
+Azure Load Testing setup:
+- resource: alt-emergency-surge-loadtest
+- test: emergency-surge-loadtest-ping-dev
+- test type: URL
+- engine instances: 1
+- concurrent users per engine: 5
+- test duration: 2 minutes
+- ramp-up time: 1 minute
+- network: Public
+- region: East US
+
+Captured result highlights:
+- total requests: 79,334
+- duration: about 2 min 5 sec
+- throughput: about 708 requests/sec
+- error percentage: 0%
+- percentile latency evidence captured
+- backend logs confirmed /loadtest/ping traffic reached AKS backend pod
+
+Status:
+- DONE
+
+SECTION E - VERIFY SERVICE BEHAVIOR AFTER LOAD
+Completed:
+- re-checked /health
+- re-checked /loadtest/ping
+- re-checked pods/services
+- inspected backend logs after traffic
+- confirmed no crash loop / restart condition in current evidence
+
+Status:
+- DONE
+
+SECTION F - APPLICATION INSIGHTS / AZURE MONITOR IMPLEMENTATION
+Goal:
+Add request telemetry from inside the running Node.js backend on AKS.
+
+Completed implementation:
+1. Application Insights resource created:
+   - appi-emergency-surge-backend
+2. Node package added:
+   - @azure/monitor-opentelemetry
+3. instrumentation file added:
+   - src/instrumentation.js
+4. startup changed in package.json:
+   - "start": "node --import ./src/instrumentation.js src/server.js"
+   - "dev": "node --watch --import ./src/instrumentation.js src/server.js"
+5. local validation completed with APPLICATIONINSIGHTS_CONNECTION_STRING
+6. deployable repo updated and pushed
+7. Kubernetes Secret created:
+   - appinsights-backend-secret
+8. initial environment variable wiring mistake corrected
+   - literal string removed
+   - secretKeyRef / --from=secret wiring used
+9. Dockerfile corrected
+   - old: CMD ["node", "src/server.js"]
+   - new: CMD ["npm", "start"]
+10. image built and pushed:
+   - node-mrgc-api-image:dev-appinsights-v2
+11. AKS deployment updated
+12. rollout completed
+13. AKS pod logs confirmed:
+   - Azure Monitor Application Insights initialized
+
+Status:
+- DONE
+
+SECTION G - WHY THE DOCKERFILE FIX MATTERED
+Problem:
+- package.json correctly preloaded instrumentation.js
+- but Dockerfile bypassed npm start by calling node src/server.js directly
+- therefore instrumentation.js never loaded inside AKS
+- backend was healthy, but telemetry did not appear
+
+Fix:
+- Dockerfile changed to:
+  - CMD ["npm", "start"]
+
+Result:
+- container used package.json startup script
+- instrumentation.js loaded before server.js
+- Application Insights initialized inside AKS
+
+Status:
+- DONE
+
+SECTION H - KUBERNETES SECRET CONFIGURATION
+Secret:
+- appinsights-backend-secret
+
+Key:
+- APPLICATIONINSIGHTS_CONNECTION_STRING
+
+Correct behavior:
+- AKS deployment consumed the secret as environment variable
+- connection string was not hardcoded in source code
+- same image can run locally without telemetry or in AKS with telemetry
+
+Status:
+- DONE
+
+SECTION I - APPLICATION INSIGHTS / KQL PROOF
+Traffic generated:
+- /health
+- /loadtest/ping
+
+Application Insights evidence:
+- request telemetry appeared in requests table
+- AKS backend role instance was visible
+- GET /loadtest/ping was visible
+- public backend URL was visible
+- resultCode 200 was visible
+- success true was visible
+- duration values were visible
+
+KQL percentile proof:
+- request count
+- average duration
+- P50 duration
+- P95 duration
+- failures count
+
+Observed proof included:
+- GET /loadtest/ping requestCount 21
+- failures 0
+- GET /health requestCount 1
+- failures 0
+
+Status:
+- DONE
+
+SECTION J - HISTORICAL FAILURE / RECOVERY
+Historical proof:
+- Dev -> QA -> Prod -> rollback/recovery was completed and screenshots were captured before later Azure deletion/rebuild.
+
+Current rebuilt Dev:
+- fresh current-Dev failure/recovery drill was not required for final public story.
+
+Status:
+- DONE HISTORICALLY
+- CURRENT DEV REVALIDATION OPTIONAL / NOT PART OF FINAL CLAIM
+
+SECTION K - FINAL SCREENSHOT CHECKLIST
+Captured:
+1. frontend live from Azure
+2. backend /health
+3. backend /loadtest/ping
+4. kubectl get all / svc in Dev namespace
+5. backend image tag in deployment
+6. ACR tags
+7. AKS workloads/services
+8. Azure Load Testing configuration
+9. Azure Load Testing result summary
+10. Azure Load Testing P95/client-side metrics
+11. backend logs showing /loadtest/ping status 200
+12. Application Insights resource
+13. instrumentation code
+14. Kubernetes Secret evidence
+15. Dockerfile fix / npm start startup evidence
+16. AKS pod log showing Application Insights initialized
+17. KQL request telemetry
+18. KQL P50/P95 evidence
+
+Status:
+- DONE / FINAL ORGANIZATION IN PROGRESS
+
+SECTION L - FINAL NARRATIVE VALUE
+This guide supports these honest claims:
+
+- app was deployed to AKS and run from Azure
+- current Dev runtime behavior was verified
+- container logs were inspected
+- clean load-test endpoint was added
+- Azure Load Testing generated high-volume request evidence
+- AKS backend logs confirmed traffic reached the pod
+- backend was instrumented with Azure Monitor/OpenTelemetry
+- Kubernetes Secret injected Application Insights connection string
+- Application Insights captured AKS backend telemetry
+- KQL produced P50/P95 and failure-count evidence
+- historical Dev -> QA -> Prod -> rollback/recovery evidence exists separately
+
+END OF SRE APP IN DETAIL v4

@@ -1,0 +1,409 @@
+STEP BY STEP HIGH OVERVIEW v17
+Emergency Surge Demo, Azure DevOps + GitHub + Terraform + AKS + ACR + SRE + Observability + Cost Evidence
+
+GOAL
+Build and document one solid Azure delivery evidence package that proves:
+
+1. GitHub source control
+2. Azure DevOps orchestration
+3. Terraform infrastructure provisioning
+4. AKS runtime execution
+5. ACR image publishing
+6. logical Dev / QA / Prod separation
+7. historical Dev -> QA -> Prod -> rollback/recovery evidence
+8. current Dev runtime/SRE proof
+9. Azure Load Testing evidence
+10. AKS/container log evidence
+11. Application Insights / Azure Monitor backend telemetry
+12. KQL P50/P95 request evidence
+13. Azure Pricing Calculator estimate
+14. Azure Cost Management actual spend review
+15. cost-control cleanup after evidence capture
+
+IMPORTANT v17 UPDATE
+This version updates v16 with the final post-Stage-3 and post-APCalc truth.
+
+Key correction:
+Application Insights / Azure Monitor is no longer planned.
+It was completed against current rebuilt Dev.
+
+Azure Pricing Calculator / Cost Management is no longer in progress.
+It was completed, and the project Azure resource groups were deleted after evidence capture.
+
+CURRENT FINAL TRUTH
+The project evidence now separates four realities:
+
+1. Historical lifecycle evidence
+   - Dev deployment: completed historically
+   - QA deployment: completed historically
+   - Prod deployment: completed historically
+   - Rollback/recovery proof: completed historically
+
+2. Current rebuilt Dev evidence
+   - Terraform backend recreated
+   - AKS and ACR recreated
+   - Dev redeployed and live during evidence capture
+   - QA namespace existed but had no active workload after rebuild
+   - Prod namespace existed but had no active workload after rebuild
+   - /loadtest/ping endpoint deployed
+   - Azure Load Testing completed against current Dev backend
+   - AKS backend logs verified request traffic
+   - Application Insights telemetry completed
+   - KQL P50/P95 evidence completed
+
+3. Cost-control evidence
+   - Cost Management actual spend captured
+   - Cost by service captured
+   - Cost by resource group captured
+   - Cost by resource captured
+   - Azure Pricing Calculator estimate captured
+   - Actual vs estimate narrative completed
+   - Azure resources deleted after evidence capture
+
+4. Current Azure runtime status
+   - The Azure environment used for evidence capture is no longer active.
+   - Main platform resource group was deleted.
+   - AKS managed resource group was deleted.
+   - Terraform state resource group was deleted.
+   - Remaining Azure resource groups are not part of the Emergency Surge platform.
+
+PROPOSED / ACTUAL NAMES
+
+Azure DevOps organization:
+- ng-delivery-demo-org
+
+Azure DevOps project:
+- emergency-surge-platform
+
+Azure DevOps environments:
+- mrgnc-surge-dev
+- mrgnc-surge-qa
+- mrgnc-surge-prod
+
+Primary pipeline:
+- emergency-surge-aks-multistage
+
+Azure resource names used during evidence capture:
+- Resource Group: rg-emergency-surge-platform
+- ACR: acremergencysurge
+- AKS cluster: aks-emergency-surge
+- Terraform state resource group: rg-tfstate-emergency-surge
+- Terraform state storage account: sttfemergencysurge
+- Terraform state container: tfstate
+- Application Insights: appi-emergency-surge-backend
+- Azure Load Testing: alt-emergency-surge-loadtest
+
+AKS namespaces:
+- aks-mrgnc-surge-dev
+- aks-mrgnc-surge-qa
+- aks-mrgnc-surge-prod
+
+Image repositories:
+- node-mrgc-api-image
+- ng-mrgc-ui-image
+
+Important image tags:
+- backend Dev base: node-mrgc-api-image:dev
+- backend Dev SRE/load-test: node-mrgc-api-image:dev-loadtest-v1
+- backend Dev Application Insights final: node-mrgc-api-image:dev-appinsights-v2
+- frontend Dev: ng-mrgc-ui-image:dev-v2
+- historical QA backend: node-mrgc-api-image:qa-v1
+- historical QA frontend: ng-mrgc-ui-image:qa-v1
+- historical Prod backend: node-mrgc-api-image:prod-v1
+- historical Prod frontend: ng-mrgc-ui-image:prod-v1 / prod-v2 evidence existed historically
+
+HIGH-LEVEL FLOW AND FINAL STATUS
+
+STEP 1 - Create or confirm Azure DevOps organization and project
+Status:
+- DONE
+
+STEP 2 - Create Azure DevOps environments
+Actual environments:
+- mrgnc-surge-dev
+- mrgnc-surge-qa
+- mrgnc-surge-prod
+
+Status:
+- DONE
+
+STEP 3 - Connect Azure DevOps to GitHub repositories
+Use GitHub as source control and Azure DevOps as CI/CD orchestrator.
+
+Status:
+- DONE
+
+STEP 4 - Create one multi-stage Azure pipeline
+Current proven pipeline capability:
+- starter pipeline created
+- self-hosted agent configured
+- Terraform init/validate/plan/apply proven through Azure DevOps using remote state
+- app deployments to Dev/QA/Prod were manually proven first
+- full pipeline-driven app build/push/deploy automation remains optional and not part of the completed public claim
+
+Status:
+- PARTIAL / INFRA PIPELINE PROOF DONE / FULL APP PIPELINE AUTOMATION OPTIONAL
+
+STEP 5 - Create secrets strategy
+Completed:
+- Azure DevOps secret variable used for Terraform backend access:
+  - ARM_ACCESS_KEY
+- remote backend used Azure Storage:
+  - rg-tfstate-emergency-surge
+  - sttfemergencysurge
+  - tfstate
+  - dev.terraform.tfstate
+- Kubernetes Secret used for Application Insights:
+  - appinsights-backend-secret
+  - APPLICATIONINSIGHTS_CONNECTION_STRING
+
+Status:
+- DONE
+
+STEP 6 - Prepare repo structure
+Repos:
+- ng-mrgc-ui
+- node-mrgc-api
+- mrgc-platform-iac
+
+Public repo role:
+- mrgc-platform-iac is the main Azure delivery evidence repository
+- ng-mrgc-ui remains the frontend supervisor dashboard repository
+- node-mrgc-api remains the backend simulation service repository
+
+Status:
+- DONE / FINAL ORGANIZATION IN PROGRESS
+
+STEP 7 - Create minimal Azure pipeline and prove Terraform execution
+Current proven capability:
+- Terraform init
+- Terraform validate
+- Terraform plan
+- Terraform apply
+- self-hosted agent execution
+- remote state access through ARM_ACCESS_KEY
+
+Status:
+- DONE FOR TERRAFORM INFRA PIPELINE PROOF
+
+STEP 8 - Create AKS and supporting Azure resources
+Created/recreated by Terraform:
+- rg-emergency-surge-platform
+- acremergencysurge
+- aks-emergency-surge
+- AcrPull role assignment
+
+Important correction:
+- first AKS VM size failed because Standard_B4ms was not allowed
+- working VM size used:
+  - Standard_DC2as_v5
+
+Status:
+- DONE DURING EVIDENCE CAPTURE
+- LATER DELETED FOR COST CONTROL
+
+STEP 9 - Create Terraform remote backend and connect to pipeline
+Completed:
+- Azure Storage remote backend created
+- local/manual state and pipeline state aligned
+- backend.tf enabled
+- ARM_ACCESS_KEY configured for pipeline
+- final Azure DevOps pipeline plan/apply succeeded using shared remote state
+
+Post-rebuild:
+- backend was recreated after cost-control deletion
+- terraform init -reconfigure was used, not migrate-state
+- Terraform apply recreated platform resources
+
+Status:
+- DONE
+- BACKEND RESOURCE GROUP LATER DELETED AFTER EVIDENCE CAPTURE
+
+STEP 10 - Create AKS deployment flow
+Historical lifecycle:
+- Dev deployment: DONE
+- QA deployment: DONE historically
+- Prod deployment: DONE historically
+- Rollback/recovery: DONE historically
+
+Current rebuilt Dev:
+- backend and frontend deployed
+- public frontend/backend IPs assigned during evidence capture
+- backend /health verified
+- backend /loadtest/ping verified
+- backend logs verified
+- Application Insights telemetry verified
+
+Status:
+- DEV DONE CURRENTLY DURING EVIDENCE CAPTURE
+- QA/PROD DONE HISTORICALLY, NOT CURRENTLY DEPLOYED AFTER REBUILD
+- AZURE ENVIRONMENT LATER DELETED FOR COST CONTROL
+
+STEP 11 - Add environment approvals/checks
+Current:
+- approvals/checks configured historically
+- manual proof used before full app deployment pipeline automation
+
+Status:
+- DONE / HISTORICAL
+
+STEP 12 - Capture screenshots and organize evidence
+Evidence categories:
+- Azure DevOps project and environments
+- GitHub-connected pipeline
+- self-hosted agent
+- Terraform plan/apply
+- remote Terraform state
+- ACR repositories and tags
+- AKS cluster
+- kubectl nodes/namespaces
+- current Dev deployment
+- historical QA/Prod/rollback evidence
+- current Dev /loadtest/ping evidence
+- Azure Load Testing evidence
+- AKS/container logs
+- Application Insights / Azure Monitor evidence
+- KQL P50/P95 evidence
+- Azure Pricing Calculator evidence
+- Cost Management evidence
+- cleanup / resource group deletion evidence
+
+Status:
+- DONE / FINAL REPO ORGANIZATION IN PROGRESS
+
+STEP 13 - Build final guide and LinkedIn post assets
+Completed:
+- four LinkedIn post drafts created
+- screenshot packages renamed and organized
+- platform README strategy defined
+- backend README enriched with load-test and telemetry details
+- frontend README left unchanged by design
+
+Status:
+- IN PROGRESS / FINAL PACKAGING
+
+STEP 14 - SRE / RUNTIME PROOF
+Completed current Dev SRE proof:
+- backend/frontend running in AKS
+- /health verified
+- /loadtest/ping added and verified
+- Azure Load Testing resource created
+- Azure Load Testing run executed against /loadtest/ping
+- request count, throughput, 0% errors, and percentile evidence captured
+- backend logs show GET /loadtest/ping status 200 with responseTimeMs and correlationId
+
+Current evidence values from Azure Load Testing:
+- total requests: 79,334
+- duration: about 2 min 5 sec
+- throughput: about 708 requests/sec
+- error percentage: 0%
+
+Status:
+- DONE
+
+STEP 15 - APPLICATION INSIGHTS / AZURE MONITOR
+Completed:
+1. Application Insights resource created:
+   - appi-emergency-surge-backend
+2. Node backend instrumented with Azure Monitor/OpenTelemetry:
+   - src/instrumentation.js
+3. package.json updated:
+   - node --import ./src/instrumentation.js src/server.js
+4. local validation completed
+5. source mirrored to deployable Git repo
+6. Kubernetes Secret created:
+   - appinsights-backend-secret
+7. Secret correctly injected as APPLICATIONINSIGHTS_CONNECTION_STRING
+8. Dockerfile corrected:
+   - CMD ["npm", "start"]
+9. Backend image rebuilt and pushed:
+   - dev-appinsights-v2
+10. AKS backend deployment updated
+11. AKS pod logs confirmed:
+   - Azure Monitor Application Insights initialized
+12. traffic generated against /health and /loadtest/ping
+13. Application Insights request telemetry captured
+14. KQL queries produced request count, avg duration, P50, P95, and failures
+
+Status:
+- DONE
+
+STEP 16 - AZURE PRICING CALCULATOR / COST MANAGEMENT
+Completed:
+1. Cost Management billing scope captured
+2. Cost analysis accumulated actual/forecast captured
+3. cost grouped by service captured
+4. cost grouped by resource group captured
+5. cost grouped by resource captured
+6. Azure Pricing Calculator estimate created
+7. estimate included:
+   - Virtual Machines
+   - Azure Container Registry
+   - Storage Account
+   - Azure Monitor
+   - Azure App Testing / Load Testing
+8. final monthly estimate captured:
+   - about $76.44/month
+9. actual cost captured:
+   - about $9.82
+10. forecast captured:
+   - about $27.84
+11. Azure credits remaining captured:
+   - about $181.78
+12. active project resources identified
+13. project resource groups deleted
+
+Deleted/gone:
+- rg-emergency-surge-platform
+- MC_rg-emergency-surge-platform_aks-emergency-surge_eastus
+- rg-tfstate-emergency-surge
+
+Status:
+- DONE
+
+FINAL TRUTH TABLE
+
+Platform / Terraform / AKS / ACR:
+- DONE
+
+Azure DevOps Terraform pipeline proof:
+- DONE
+
+Full automated app CI/CD pipeline:
+- OPTIONAL / NOT CLAIMED AS COMPLETE
+
+Dev runtime proof:
+- DONE DURING EVIDENCE CAPTURE
+
+QA / Prod:
+- DONE HISTORICALLY
+- NOT CURRENTLY DEPLOYED AFTER REBUILD
+
+Rollback / recovery:
+- DONE HISTORICALLY
+
+Azure Load Testing:
+- DONE
+
+AKS/container logs:
+- DONE
+
+Application Insights / Azure Monitor:
+- DONE
+
+KQL P50/P95:
+- DONE
+
+Azure Pricing Calculator:
+- DONE
+
+Cost Management:
+- DONE
+
+Azure cleanup:
+- DONE
+
+Current live Azure environment:
+- NOT ACTIVE / DECOMMISSIONED AFTER EVIDENCE CAPTURE
+
+END OF HIGH OVERVIEW v17

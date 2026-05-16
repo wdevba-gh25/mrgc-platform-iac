@@ -1,0 +1,319 @@
+AKS itself may look abstract, but the real bill shows the worker-node VM cost as the dominant driver.
+
+-------------------------------------------------------------------
+The main project spend is concentrated around the Emergency Surge platform resources, not the Terraform state backend.
+
+-------------------------------------------------------------------
+Cost Management showed Virtual Machines as the largest actual cost driver. In the Pricing Calculator, I modeled this as one Linux VM running 730 hours/month to approximate the AKS worker node baseline cost.:
+
+Region: East US
+Operating system: Linux
+Type: Standard? OPTION NOT FOUND- DEFAULT TO UBUNTU
+Tier: Standard
+Instance: Standard DC2as v5 - OPTION NOT FOUND- DEFAULT TO WHAT YOU SEE ON SCREENSHOT
+Quantity: 1
+Hours: 730 per month
+
+-------------------------------------------------------------------
+Cost Analysis showed Container Registry at about $0.47 actual cost.
+Cost Management showed ACR actual spend around $0.47 because it was used for only part of the month.
+Pricing Calculator estimates ACR Basic as about $5/month for a full 30-day month:
+
+Pricing estimate assumption:
+The Terraform remote state backend was modeled as a minimal Standard LRS General Purpose v2 storage account in East US, using 1 GB capacity and low/default operations. This is not intended to model application data storage; it models small infrastructure state files and lightweight backend storage overhead.
+Actual Cost Management showed Storage as a visible cost driver, while the Pricing Calculator estimated a minimal storage account at about $1.06/month. Any difference is expected because actual billing includes real operations, resource lifetime, and any supporting storage generated during the project.
+
+Tier: Basic
+Region: East US, if asked
+Storage: default / minimal? 0GB?- OPTION NOT FOUND- CONFUSING DATA.
+Build tasks: none? - OPTION NOT FOUND- CONFUSING DATA.
+Geo-replication: none?- OPTION NOT FOUND- CONFUSING DATA.
+
+-------------------------------------------------------------------
+
+AZURE MONITOR:
+
+Azure Monitor was added to the Pricing Calculator as the observability component for Application Insights and KQL request telemetry. The estimate was kept at default/minimum values because this was a short demo workload with very low telemetry volume, no alert rules, no ITSM integration, and no production-scale monitoring configuration.
+
+Region:
+East US
+
+Log Data Ingestion:
+Leave collapsed/default if it stays $0.00,
+or set Daily ingestion to the minimum available value if expanded.
+
+SCOM Managed Instance:
+0 / leave default
+
+Metrics:
+0 / leave default
+
+Application Insights:
+Leave default/minimum.
+If it opens and asks for data volume, use the minimum available value.
+
+Alert Rules:
+0 / leave default
+
+ITSM Connector:
+0 / leave default
+
+Notifications:
+0 / leave default
+
+-------------------------------------------------------------------
+AZURE APP TESTING:
+
+Playwright Workspaces were not used in this project and should be excluded from the estimate.
+Azure App Testing was included only for Azure Load Testing usage. Playwright browser testing was not used, so it was excluded from the estimate. The modeled load test uses 5 virtual users, 2 minutes, and 1 run/month, matching the proof-level load test approach rather than production-scale continuous testing.
+Keep this part:
+
+Region: East US
+
+Azure Load Testing:
+Estimation method: Load test details
+Virtual users per test: 5
+Test duration: 2 minutes
+Test runs per month: 1
+
+This gives approximately:
+
+Usage: 2 virtual user hours
+Cost: about $0.30
+
+Now fix this part:
+
+Playwright Workspaces:
+Total number of Playwright tests in the test suite: 0
+Average duration per test run: 0
+Number test runs per month: 0
+
+This screenshot is the clean Azure App Testing estimate we wanted.
+
+Visible estimate:
+
+Azure Load Testing:
+5 virtual users
+2 minutes
+1 test run per month
+Usage: 2 virtual user hours
+Estimated cost: $0.30/month
+
+Playwright Workspaces:
+minimum/near-zero placeholder
+Estimated cost: $0.01/month
+
+Azure App Testing total:
+$0.30/month
+
+-------------------------------------------------------------------
+
+This is the final Pricing Calculator estimate summary.
+
+Visible final estimate:
+
+Estimated upfront cost: $0.00
+Estimated monthly cost: $76.44
+
+Included products and monthly estimates:
+
+Virtual Machines: $70.08
+Azure Container Registry: $5.00
+Storage Accounts: $1.06
+Azure Monitor: $0.00
+Azure App Testing: $0.30
+
+Label this screenshot:
+
+APCalc Evidence 12 - Pricing Calculator final estimate summary
+
+This is a strong comparison point against your real Azure Cost Analysis:
+
+Actual cost so far: about $9.82
+Forecast cost: about $27.84
+Calculator steady-state monthly estimate: $76.44
+
+Interpretation:
+The Pricing Calculator models a full-month steady-state estimate, while Cost Management shows partial-month actual usage from a short-lived demo environment. The difference is expected because the project resources were created, tested, deleted/recreated, and used only for limited proof windows rather than a full 730-hour production month.
+
+
+-*-**-*-*-**-**--------------------------------------------------------------------
+
+Azure Cost Management showed approximately $9.82 actual cost and approximately $27.84 forecast cost for May 2026 at the time of capture.
+
+Azure Pricing Calculator estimated approximately $76.44/month for a simplified full-month model of the architecture, including:
+- one Linux VM approximation for AKS worker-node compute
+- Azure Container Registry Basic
+- minimal Storage Account
+- Azure Monitor at default/minimal usage
+- Azure App Testing / Azure Load Testing proof-level usage
+
+The estimate is intentionally higher than current actual cost because it assumes a full-month baseline, while the actual environment was short-lived, rebuilt, and used mainly for proof captures. Cost Management remains the source of truth for actual spend, while Pricing Calculator provides the planning baseline.
+
+
+-*-**-*-*-**-**--------------------------------------------------------------------
+FINAL EVIDENCES, SUMMARY AND DESTRUCTION OF CURRENT AZURE PORTAL
+
+You now have the pre-destruction resource inventory:
+
+APCalc Evidence 13A - Terraform state storage account overview
+APCalc Evidence 13B - Terraform state storage settings / networking
+APCalc Evidence 13C - Terraform state storage resource group proof
+APCalc Evidence 14 - Final platform resource inventory before cleanup
+
+The final platform inventory screenshot proves rg-emergency-surge-platform currently contains:
+
+acremergencysurge                  Container registry
+aks-emergency-surge                Kubernetes service
+alt-emergency-surge-loadtest       Azure Load Testing
+appi-emergency-surge-backend       Application Insights
+Application Insights Smart Detection Action group
+
+This is excellent pre-destroy evidence. It proves exactly what was alive before cleanup.
+
+Cleanup order
+
+Destroy the main platform resource group first:
+
+az group delete --name rg-emergency-surge-platform --yes --no-wait
+
+Then verify deletion started:
+
+az group show --name rg-emergency-surge-platform --output table
+
+If it says it cannot find it, that is fine. If it still exists, Azure may be deleting in background.
+
+Then check group list:
+
+az group list --output table
+Terraform state resource group decision
+
+rg-tfstate-emergency-surge contains the Terraform state storage account:
+
+sttfemergencysurge
+
+Delete it too only if you are done preserving Terraform state in Azure.
+
+Given your stated plan — destroy everything consuming money before LinkedIn packaging — delete it after the main group:
+
+az group delete --name rg-tfstate-emergency-surge --yes --no-wait
+
+Then verify:
+
+az group list --output table
+
+Now the only project resource group left is:
+
+rg-tfstate-emergency-surge
+
+Delete it now:
+
+az group delete --name rg-tfstate-emergency-surge --yes --no-wait
+
+Then verify:
+
+az group list --output table
+
+Expected remaining groups:
+
+VisualStudioOnline-6666529736184C99BECE0E1E7932EA60
+NetworkWatcherRG
+DefaultResourceGroup-EUS
+
+That will mean the Emergency Surge Azure platform cleanup is complete.
+
+D:\Ready to use\GITMS\node-mrgc-api>az group delete --name rg-tfstate-emergency-surge --yes --no-wait
+
+D:\Ready to use\GITMS\node-mrgc-api>az group list --output table
+Name                                                 Location     Status
+---------------------------------------------------  -----------  ---------
+VisualStudioOnline-6666529736184C99BECE0E1E7932EA60  brazilsouth  Succeeded
+NetworkWatcherRG                                     eastus       Succeeded
+rg-tfstate-emergency-surge                           eastus       Deleting
+DefaultResourceGroup-EUS                             eastus       Succeeded
+
+D:\Ready to use\GITMS\node-mrgc-api>az group list --output table
+Name                                                 Location     Status
+---------------------------------------------------  -----------  ---------
+VisualStudioOnline-6666529736184C99BECE0E1E7932EA60  brazilsouth  Succeeded
+NetworkWatcherRG                                     eastus       Succeeded
+DefaultResourceGroup-EUS                             eastus       Succeeded
+
+D:\Ready to use\GITMS\node-mrgc-api>
+
+AZURECALYPSE COMPLETE. ✅🔥
+
+Project Azure cleanup is done.
+
+Confirmed deleted/gone:
+
+rg-emergency-surge-platform
+MC_rg-emergency-surge-platform_aks-emergency-surge_eastus
+rg-tfstate-emergency-surge
+
+Remaining resource groups:
+
+VisualStudioOnline-6666529736184C99BECE0E1E7932EA60
+NetworkWatcherRG
+DefaultResourceGroup-EUS
+
+Those are not the Emergency Surge platform groups.
+
+Label this evidence:
+
+APCalc Evidence 15 - Main platform resource group deleted
+APCalc Evidence 16 - Terraform state resource group deleting
+APCalc Evidence 17 - Final resource group list after cleanup
+
+Final cost-control story is now complete:
+
+Actual cost captured: ~$9.82
+Forecast captured: ~$27.84
+Pricing Calculator estimate captured: ~$76.44/month
+Active resources identified
+Main platform destroyed
+AKS managed group destroyed
+Terraform state backend destroyed
+
+So the Azure Pricing Calculator / Cost Management stage is now DONE, pending only updating the guide files and organizing screenshots.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

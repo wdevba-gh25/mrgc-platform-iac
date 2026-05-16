@@ -1,0 +1,343 @@
+STEP BY STEP AKS IN DETAIL v3
+Emergency Surge Demo, AKS creation for Azure DevOps + Terraform + CI/CD
+
+IMPORTANT
+This version uses the attached AKS v2 guide as the baseline and strengthens the post-AKS clarity.
+AKS creation remains complete, but the guide now makes clearer what AKS actually unlocked:
+- namespaces
+- ACR pull
+- manual Dev deployment viability
+- pod events/log visibility
+- real Azure-hosted app execution
+
+CURRENT FACTS
+- repo root:
+  D:\Ready to use\GITMS\mrgc-platform-iac
+- Terraform folder:
+  D:\Ready to use\GITMS\mrgc-platform-iac\infra\terraform
+- Azure CLI is installed and working
+- Azure CLI login already works
+- Terraform is installed and working
+- self-hosted agent exists, but AKS infra proof was completed first through local/manual Terraform execution
+- AKS, ACR, and resource group now exist successfully
+- kubectl access works successfully
+- namespaces now exist successfully
+- backend and frontend were later deployed manually to Dev in AKS
+- Azure Portal and kubectl both provide useful evidence after AKS creation
+
+======================================================================
+STEP 1 - CONFIRM THE AKS MODEL
+======================================================================
+
+Use this model:
+- one AKS cluster
+- three namespaces
+  - aks-mrgnc-surge-dev
+  - aks-mrgnc-surge-qa
+  - aks-mrgnc-surge-prod
+
+Why:
+- lower cost
+- lower complexity
+- easier showcase
+- easier screenshots
+- easier single-pipeline story later
+
+Status:
+- DONE
+
+======================================================================
+STEP 2 - CONFIRM THE AZURE RESOURCE NAMES
+======================================================================
+
+Terraform created:
+
+Resource group:
+- rg-emergency-surge-platform
+
+ACR:
+- acremergencysurge
+
+AKS:
+- aks-emergency-surge
+
+DNS prefix:
+- emergency-surge
+
+Status:
+- DONE
+
+======================================================================
+STEP 3 - OPEN THE CORRECT TERRAFORM FOLDER
+======================================================================
+
+CMD folder used:
+D:\Ready to use\GITMS\mrgc-platform-iac\infra\terraform
+
+Status:
+- DONE
+
+======================================================================
+STEP 4 - CONFIRM THE AZURE LOGIN CONTEXT
+======================================================================
+
+Confirmed values:
+- id = af989cb4-02c6-4dda-9a94-908e82bb580b
+- name = Azure subscription 1
+- state = Enabled
+- tenantId = c5807846-7851-4e6c-9d68-84b629c10642
+
+Status:
+- DONE
+
+======================================================================
+STEP 5 - CONFIRM THE DEV TFVARS FILE
+======================================================================
+
+IMPORTANT UPDATE
+The original `Standard_B4ms` attempt failed during AKS creation because that VM size was not allowed in the subscription/region.
+
+Working value used:
+- `Standard_DC2as_v5`
+
+Effective dev.tfvars values:
+- subscription_id = af989cb4-02c6-4dda-9a94-908e82bb580b
+- location = eastus
+- platform_resource_group_name = rg-emergency-surge-platform
+- acr_name = acremergencysurge
+- aks_cluster_name = aks-emergency-surge
+- dns_prefix = emergency-surge
+- node_count = 1
+- vm_size = Standard_DC2as_v5
+
+Status:
+- DONE
+
+======================================================================
+STEP 6 - RUN THE PRE-APPLY CHECKS
+======================================================================
+
+Executed:
+- terraform validate
+- terraform plan -var-file="environments/dev.tfvars"
+
+Final successful recovery plan shape:
+- after RG and ACR already existed, the retry plan correctly showed only:
+  - AKS cluster
+  - AcrPull role assignment
+
+Status:
+- DONE
+
+======================================================================
+STEP 7 - UNDERSTAND WHAT APPLY WILL DO
+======================================================================
+
+Confirmed understanding:
+- Terraform would create the platform resource group, ACR, AKS, and AcrPull role assignment
+- this was real Azure creation
+- this was not a test run
+
+Status:
+- DONE
+
+======================================================================
+STEP 8 - RUN TERRAFORM APPLY
+======================================================================
+
+Executed:
+- terraform apply -var-file="environments/dev.tfvars"
+
+What happened:
+1. first attempt:
+   - RG created
+   - ACR created
+   - AKS failed because Standard_B4ms was not allowed in eastus for that subscription
+2. recovery:
+   - vm_size changed to Standard_DC2as_v5
+   - plan rerun
+   - apply rerun
+3. second attempt:
+   - AKS created successfully
+   - AcrPull role assignment created successfully
+
+Status:
+- DONE
+
+======================================================================
+STEP 9 - CAPTURE THE APPLY RESULT
+======================================================================
+
+Successful outputs recorded:
+- acr_login_server = acremergencysurge.azurecr.io
+- acr_name = acremergencysurge
+- aks_cluster_name = aks-emergency-surge
+- aks_resource_group_name = rg-emergency-surge-platform
+- resource_group_name = rg-emergency-surge-platform
+
+Status:
+- DONE
+
+======================================================================
+STEP 10 - VERIFY THE RESOURCE GROUP IN AZURE PORTAL
+======================================================================
+
+Verified:
+- rg-emergency-surge-platform exists
+- correct region
+- expected resources visible
+
+Status:
+- DONE
+
+======================================================================
+STEP 11 - VERIFY THE ACR IN AZURE PORTAL
+======================================================================
+
+Verified:
+- acremergencysurge exists
+- login server visible
+- resource group correct
+
+Recorded value:
+- acremergencysurge.azurecr.io
+
+Status:
+- DONE
+
+======================================================================
+STEP 12 - VERIFY THE AKS CLUSTER IN AZURE PORTAL
+======================================================================
+
+Verified:
+- aks-emergency-surge exists
+- cluster overview visible
+- node pool exists
+- resource group correct
+- region correct
+
+Status:
+- DONE
+
+======================================================================
+STEP 13 - CONNECT KUBECTL TO THE CLUSTER
+======================================================================
+
+Executed:
+- az aks get-credentials --resource-group rg-emergency-surge-platform --name aks-emergency-surge --overwrite-existing
+- kubectl get nodes
+- kubectl get ns
+
+Result:
+- kubectl context configured successfully
+- node listed as Ready
+- default namespaces listed
+
+Status:
+- DONE
+
+======================================================================
+STEP 14 - CREATE THE THREE NAMESPACES
+======================================================================
+
+Executed:
+- kubectl create namespace aks-mrgnc-surge-dev
+- kubectl create namespace aks-mrgnc-surge-qa
+- kubectl create namespace aks-mrgnc-surge-prod
+
+Verified:
+- kubectl get ns showed:
+  - aks-mrgnc-surge-dev
+  - aks-mrgnc-surge-qa
+  - aks-mrgnc-surge-prod
+- all Active
+
+Status:
+- DONE
+
+======================================================================
+STEP 15 - RECORD THE VALUES NEEDED FOR LATER SECTIONS
+======================================================================
+
+Recorded values:
+- resource group = rg-emergency-surge-platform
+- ACR name = acremergencysurge
+- ACR login server = acremergencysurge.azurecr.io
+- AKS cluster name = aks-emergency-surge
+
+These are needed later for:
+- Docker push steps
+- Kubernetes manifests
+- deployment pipeline stages
+- documentation and screenshots
+
+Status:
+- DONE
+
+======================================================================
+STEP 16 - WHAT THIS UNLOCKS NEXT
+======================================================================
+
+This completed runbook proves:
+- Terraform created the AKS infrastructure
+- Azure resources exist
+- AKS is reachable
+- namespaces are ready for later Dev / QA / Prod targeting
+
+It also unlocked these later realities:
+- ACR-hosted images could be pulled successfully by AKS
+- backend and frontend could be deployed into `aks-mrgnc-surge-dev`
+- Azure Portal pod events could show:
+  - scheduled
+  - pulling image
+  - pulled image
+  - created container
+  - started container
+- kubectl could show live app state and logs
+- the app could be opened from Azure through a frontend LoadBalancer IP
+
+Status:
+- DONE
+
+======================================================================
+STEP 17 - SCREENSHOT CHECKLIST FOR THIS AKS RUNBOOK
+======================================================================
+
+Captured or required:
+1. terraform validate success
+2. terraform plan showing AKS resources
+3. terraform apply success
+4. resource group overview
+5. ACR overview
+6. AKS overview
+7. kubectl get nodes
+8. kubectl get ns with the 3 namespaces
+9. AKS namespaces visible in Azure Portal Kubernetes resources view, if available
+10. backend pod events in Azure Portal
+11. frontend and backend pods listed in Dev namespace
+12. app running in browser from Azure
+
+Status:
+- PARTIAL TO COMPLETE DEPENDING ON FINAL SCREENSHOT ORGANIZATION
+
+======================================================================
+STEP 18 - WHAT NOT TO DO
+======================================================================
+
+Do not:
+- manually recreate AKS in Azure Portal as the main path
+- create extra clusters for Dev / QA / Prod
+- add private cluster complexity
+- add Entra app auth complexity
+- add secret-management overengineering
+- add service mesh or extra distributed systems now
+
+Why:
+The objective remains:
+- Terraform proof
+- AKS proof
+- Azure DevOps CI/CD proof later
+- strong screenshots
+- strong story without bloat
+
+END OF AKS RUNBOOK
